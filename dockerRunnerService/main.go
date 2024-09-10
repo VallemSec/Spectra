@@ -83,6 +83,7 @@ func CreateContainer(containerName string, containerCommand []string) (string, e
 	defer cli.Close()
 
 	// TODO: make cron to pull the image every 24 hours and store it in the local registry; otherwise, pull the image.
+	// TODO: if it's a locally stored image, skip the pull step.
 	reader, err := cli.ImagePull(ctx, "docker.io/"+containerName+":latest", image.PullOptions{})
 	if err != nil {
 		return "", err
