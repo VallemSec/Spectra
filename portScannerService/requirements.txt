@@ -1,0 +1,2 @@
+python-nmap==0.7.1
+types-python-nmap==0.7.1.20240106
