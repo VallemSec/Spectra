@@ -26,6 +26,7 @@ func main() {
 		// json request body
 		var reqBody struct {
 			ContainerName    string   `json:"containerName"`
+			ContainerTag     string   `json:"containerTag"`
 			ContainerCommand []string `json:"containerCommand"`
 		}
 
@@ -43,9 +44,10 @@ func main() {
 		}
 
 		containerName := reqBody.ContainerName
+		containerTag := reqBody.ContainerTag
 		containerCommand := reqBody.ContainerCommand
 
-		out, err := CreateContainer(containerName, containerCommand)
+		out, err := CreateContainer(containerName, containerTag, containerCommand)
 		// log the error if there is any
 		if err != nil {
 			log.Println(err)
@@ -74,7 +76,7 @@ func main() {
 	}
 }
 
-func CreateContainer(containerName string, containerCommand []string) (string, error) {
+func CreateContainer(containerName string, containerTag string, containerCommand []string) (string, error) {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -82,15 +84,38 @@ func CreateContainer(containerName string, containerCommand []string) (string, e
 	}
 	defer cli.Close()
 
-	// TODO: make cron to pull the image every 24 hours and store it in the local registry; otherwise, pull the image.
-	// TODO: if it's a locally stored image, skip the pull step.
-	reader, err := cli.ImagePull(ctx, "docker.io/"+containerName+":latest", image.PullOptions{})
+	// Check if the image is already available locally
+	images, err := cli.ImageList(ctx, image.ListOptions{})
 	if err != nil {
 		return "", err
 	}
-	defer reader.Close()
 
-	io.Copy(os.Stdout, reader)
+	if strings.HasPrefix(containerName, ":") {
+		containerName = containerName[1:]
+	}
+
+	imageFound := false
+	for _, image := range images {
+		for _, tag := range image.RepoTags {
+			if tag == containerName+":"+containerTag {
+				imageFound = true
+				break
+			}
+		}
+		if imageFound {
+			break
+		}
+	}
+
+	// Pull the image from docker.io if it's not found locally
+	if !imageFound {
+		reader, err := cli.ImagePull(ctx, "docker.io/"+containerName+":"+containerTag, image.PullOptions{})
+		if err != nil {
+			return "", err
+		}
+		defer reader.Close()
+		io.Copy(os.Stdout, reader)
+	}
 
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: containerName,
@@ -119,7 +144,6 @@ func CreateContainer(containerName string, containerCommand []string) (string, e
 		return "", err
 	}
 
-	// Capture the entire output
 	var output string
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
@@ -130,7 +154,6 @@ func CreateContainer(containerName string, containerCommand []string) (string, e
 		return "", err
 	}
 
-	// Remove the container
 	if err := cli.ContainerRemove(ctx, resp.ID, container.RemoveOptions{}); err != nil {
 		return "", err
 	}

@@ -25,13 +25,14 @@ docker run -p 127.0.0.1:8008:8080 -v /var/run/docker.sock:/var/run/docker.sock d
 
 
 the API will be accessible on port 8008
-This is an example JSON to send to start subfinder and scan hu.nl
+This is an example JSON to send to start the latest version of subfinder and scan vallem.com.
 
 ```json
 {
 	"containerName": "projectdiscovery/subfinder",
+    "containerTag": "latest",
 	"containerCommand":[
-		"-d", "hu.nl"
+		"-d", "vallem.com"
 	]
 }
 ```
