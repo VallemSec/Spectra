@@ -1,0 +1,4 @@
+webservers:
+  hosts:
+    spectra.sakuracloud.nl:
+      ansible_user: manager

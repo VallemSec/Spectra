@@ -1,0 +1,64 @@
+- name: Install docker
+  hosts: webservers
+  become: true
+  tasks:
+    - name: Install aptitude
+      ansible.builtin.apt:
+        name: aptitude
+        update_cache: true
+
+    - name: Install required system packages
+      ansible.builtin.apt:
+        pkg:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+          - python3-pip
+          - virtualenv
+          - python3-setuptools
+          - sudo
+        update_cache: true
+
+    - name: Add Docker GPG apt Key
+      ansible.builtin.apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker Repository
+      ansible.builtin.apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu focal stable
+        state: present
+
+    - name: Update apt and install docker-ce
+      ansible.builtin.apt:
+        name: docker-ce
+        update_cache: true
+
+    - name: Install Docker Module for Python
+      ansible.builtin.pip:
+        name: docker
+        break_system_packages: true
+
+
+- name: Create manager user
+  hosts: webservers
+  become: true
+  vars:
+    username: manager
+    user_shell: /bin/bash
+  tasks:
+    - name: Create user
+      ansible.builtin.user:
+        name: "{{ username }}"
+        shell: "{{ user_shell }}"
+        groups: sudo,docker
+        append: true
+        create_home: true
+        password: "{{ non_root_password }}" # Coming from vault.enc
+
+    - name: Upload key from vault
+      ansible.posix.authorized_key:
+        key: "{{ ssh_public_key }}" # Coming from vault.enc
+        comment: "Ansible user public key"
+        user: "{{ username }}"
