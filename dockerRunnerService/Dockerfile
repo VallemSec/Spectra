@@ -1,5 +1,5 @@
-# Start from the latest golang base image
-FROM golang:1.23
+# Start from the latest golang base image for building the application
+FROM golang:1.23 AS builder
 
 # Set the Current Working Directory inside the container
 WORKDIR /app
@@ -16,8 +16,23 @@ COPY . .
 # Build the Go app
 RUN go build -o main .
 
+# Start a new stage from a smaller base image
+FROM debian:latest
+
+# Install necessary dependencies for the Go binary
+RUN apt-get update && apt-get install -y ca-certificates
+
+# Set the Current Working Directory inside the container
+WORKDIR /root/
+
+# Copy the pre-built binary file from the builder stage
+COPY --from=builder /app/main .
+
+# Ensure the binary has executable permissions
+RUN chmod +x ./main
+
 # Expose port 8080 to the outside world
-EXPOSE 8000
+EXPOSE 8080
 
 # Command to run the executable
 CMD ["./main"]
