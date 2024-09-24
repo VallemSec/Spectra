@@ -1,0 +1,33 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Decody-input",
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string"
+      },
+      "rules": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "results": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "err_short": {
+              "type": "string"
+            },
+            "err_long": {
+              "type": "string"
+            }
+          },
+          "required": ["err_short", "err_long"]
+        }
+      }
+    },
+    "required": ["name", "rules", "results"]
+  }
+  
