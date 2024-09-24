@@ -1,0 +1,17 @@
+services:
+  mariadb:
+    image: mariadb:lts-ubi9
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: password
+      MARIADB_DATABASE: decody_devdb
+    ports:
+      - 3306:3306
+
+  keydb:
+    image: bitnami/keydb:6.3.4-debian-12-r3
+    restart: unless-stopped
+    environment:
+      ALLOW_EMPTY_PASSWORD: yes
+    ports:
+      - 6379:6379
