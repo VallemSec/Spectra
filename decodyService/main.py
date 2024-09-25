@@ -1,4 +1,4 @@
-from flask import Flask, g, make_response
+from flask import Flask, g
 import dotenv
 import logging
 import os
@@ -7,12 +7,17 @@ import pymysql
 
 import endpoints
 
-
 dotenv.load_dotenv()
 
-logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", handlers=[
-    logging.StreamHandler(), logging.FileHandler(os.getenv("LOG_FILE", "decody.log"), encoding="utf-8")
-], level=os.getenv("LOGLEVEL", "INFO").upper())
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler(
+            os.getenv("LOG_FILE", "decody.log"), encoding="utf-8"
+        )
+    ],
+    level=os.getenv("LOGLEVEL", "INFO").upper()
+)
 
 db_logger = logging.getLogger("db_appcontext")
 
@@ -24,14 +29,15 @@ app.register_blueprint(endpoints.generate_app)
 @app.before_request
 def open_db():
     if "keydb_conn" not in g:
-        keydb_conn = keydb.KeyDB(host=os.getenv("KEYDB_HOST", "localhost"), port=int(os.getenv("KEYDB_PORT", "6379")))
+        keydb_conn = keydb.KeyDB(
+            host=os.getenv("KEYDB_HOST", "localhost"),
+            port=int(os.getenv("KEYDB_PORT", "6379"))
+        )
         try:
             keydb_conn.ping()
         except keydb.ConnectionError:
             db_logger.debug("Failed to open connection to keydb")
-            response = make_response("Internal server error")
-            response.status_code = 500
-            return response
+            return "Internal server error", 500
         g.keydb_conn = keydb_conn
         db_logger.debug("Opened connection to keydb")
     if "mariadb_conn" not in g:
@@ -44,9 +50,7 @@ def open_db():
             )
         except pymysql.err.OperationalError:
             db_logger.debug("Failed to open connection to maria db")
-            response = make_response("Internal server error")
-            response.status_code = 500
-            return response
+            return "Internal server error", 500
         g.mariadb_conn = mariadb_conn
         db_logger.debug("Opened connection to maria db")
 
