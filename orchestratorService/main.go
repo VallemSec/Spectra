@@ -44,7 +44,8 @@ func main() {
 		err = json.NewDecoder(r.Body).Decode(&jsonBody)
 		if err != nil {
 			log.Println(err)
-			return
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		}
 
 		var config Config
@@ -68,10 +69,16 @@ func main() {
 				}
 			}
 
-			_, err := runDockerService(runner)
+			dockerBody, err := runDockerService(runner)
 			if err != nil {
 				log.Println(err)
+				// return the error as the response in JSON format
+				return
 			}
+
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(map[string]string{"output": dockerBody})
 		}
 	})
 
@@ -107,6 +114,7 @@ func runDockerService(config RunnerConfig) (string, error) {
 
 	// read the response body
 	body, err := io.ReadAll(resp.Body)
+	log.Println(string(body))
 	if err != nil {
 		return "", err
 	}
