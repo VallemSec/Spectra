@@ -88,6 +88,7 @@ func main() {
 	}
 }
 
+// this function replaces the template arguments in the command arguments with set values like the target
 func replaceTemplateArgs(args []string, target string) []string {
 	for i, arg := range args {
 		if arg == "{{req_domain}}" {
@@ -97,6 +98,7 @@ func replaceTemplateArgs(args []string, target string) []string {
 	return args
 }
 
+// this function kicks off a docker container with the given configuration and returns the output of the container
 func runDockerService(runConf RunnerConfig) (string, error) {
 	type runnerJSON struct {
 		ContainerName    string   `json:"containerName"`
@@ -137,7 +139,6 @@ func runDockerService(runConf RunnerConfig) (string, error) {
 // TODO: implement the function without sample data
 func sendResultToParser(containerName, containerOutput string) ParserOutputJson {
 	// send the result to the parser
-
 	returnData := ParserOutputJson{
 		ScannerName: containerName,
 		Vulnerabilities: []vulnerability{
@@ -151,6 +152,9 @@ func sendResultToParser(containerName, containerOutput string) ParserOutputJson 
 	return returnData
 }
 
+// this runs scans if the initials scans have vulnerabilities that require subsequent scans
+// it runs the scans that are in the results map of the runner config
+// TODO: send parsed results to decody
 func runSubsequentScans(pout ParserOutputJson, rc RunnerConfig, t string, cf ConfigFile) {
 	// get all the keys of results
 	var resultKeys []string
@@ -185,14 +189,14 @@ func runScanFromConfig(rf RunnerConfig, t string, cf ConfigFile) (string, error)
 
 	fmt.Println("Running scan: ", rf.ContainerName)
 	fmt.Println("Args: ", rf.CmdArgs)
-	serviceRes, err := runDockerService(rf)
+	sr, err := runDockerService(rf)
 	if err != nil {
 		return "", err
 	}
 
-	parserRes := sendResultToParser(rf.ContainerName, serviceRes)
+	pr := sendResultToParser(rf.ContainerName, sr)
 
-	runSubsequentScans(parserRes, rf, t, cf)
+	runSubsequentScans(pr, rf, t, cf)
 
-	return serviceRes, nil
+	return sr, nil
 }
