@@ -46,7 +46,9 @@ def open_db():
                 host=os.getenv("MARIADB_HOST", "localhost"),
                 port=int(os.getenv("MARIADB_PORT", "3306")),
                 user=os.getenv("MARIADB_USER", "root"),
-                password=os.getenv("MARIADB_PASSWORD", "password")
+                password=os.getenv("MARIADB_PASSWORD", "password"),
+                database=os.getenv("MARIADB_DATABASE", "decody_devdb"),
+                cursorclass=pymysql.cursors.DictCursor
             )
         except pymysql.err.OperationalError:
             db_logger.debug("Failed to open connection to maria db")
