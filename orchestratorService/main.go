@@ -169,7 +169,7 @@ func runSubsequentScans(pout ParserOutputJson, rc RunnerConfig, t string, cf Con
 
 	for _, vulnerability := range pout.Vulnerabilities {
 		vulnerabilityPos := slices.Index(resultKeys, vulnerability.ErrShort)
-		if vulnerabilityPos != -1 {
+		if vulnerabilityPos != -1 { // if there is a match of the vulnerability in the results
 			// get the scans that need to be run
 			scansToRun := rc.Results[resultKeys[vulnerabilityPos]]
 
