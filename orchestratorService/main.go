@@ -3,10 +3,13 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"slices"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 )
@@ -32,6 +35,16 @@ type RunnerConfig struct {
 	Results       map[string][]string `yaml:"results"`
 }
 
+type ParserOutputJson struct {
+	ScannerName     string          `json:"scanner_name"`
+	Vulnerabilities []vulnerability `json:"vulnerabilities"`
+}
+
+type vulnerability struct {
+	ErrShort string `json:"err_short"`
+	ErrLong  string `json:"err_long"`
+}
+
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		yamlFile, err := os.ReadFile("config.yaml")
@@ -54,31 +67,15 @@ func main() {
 			log.Fatalf("Unmarshal: %v", err)
 		}
 
-		var discoveryRunners []RunnerConfig
+		for _, runnerName := range config.DiscoveryRunners {
+			runner := config.Runners[runnerName]
 
-		for _, runner := range config.DiscoveryRunners {
-			discoveryRunners = append(discoveryRunners, config.Runners[runner])
-		}
-
-		// Use the config variable as needed
-		for _, runner := range discoveryRunners {
-			// replace the target in the cmdargs
-			for i, arg := range runner.CmdArgs {
-				if arg == "{{req_domain}}" {
-					runner.CmdArgs[i] = jsonBody.Target
-				}
-			}
-
-			dockerBody, err := runDockerService(runner)
+			fromConfig, err := runScanFromConfig(runner, jsonBody.Target, config)
 			if err != nil {
-				log.Println(err)
-				// return the error as the response in JSON format
 				return
 			}
 
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(map[string]string{"output": dockerBody})
+			log.Println(fromConfig)
 		}
 	})
 
@@ -86,6 +83,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func replaceTemplateArgs(args []string, target string) []string {
+	for i, arg := range args {
+		if arg == "{{req_domain}}" {
+			args[i] = target
+		}
+	}
+	return args
 }
 
 func runDockerService(config RunnerConfig) (string, error) {
@@ -121,4 +127,66 @@ func runDockerService(config RunnerConfig) (string, error) {
 
 	// return the response body
 	return string(body), nil
+}
+
+// TODO: implement the function without sample data
+func sendResultToParser(containerName, containerOutput string) ParserOutputJson {
+	// send the result to the parser
+
+	returnData := ParserOutputJson{
+		ScannerName: containerName,
+		Vulnerabilities: []vulnerability{
+			{
+				ErrShort: "HTTP",
+				ErrLong:  "{\\\"80\\\": {\\\"name\\\": \\\"http\\\"}",
+			},
+		},
+	}
+
+	return returnData
+}
+
+func runSubsequentScans(parserOutput ParserOutputJson, config RunnerConfig, target string, configFile Config) {
+	// get all the keys of results
+	var resultKeys []string
+	for key, _ := range config.Results {
+		key = strings.ToUpper(key)
+		resultKeys = append(resultKeys, key)
+	}
+
+	for _, vulnerability := range parserOutput.Vulnerabilities {
+		fmt.Println(vulnerability)
+		fmt.Println(resultKeys)
+		vulnerabilityPos := slices.Index(resultKeys, vulnerability.ErrShort)
+		fmt.Println(vulnerabilityPos)
+		if vulnerabilityPos != -1 {
+			// get the scans that need to be run
+			scansToRun := config.Results[resultKeys[vulnerabilityPos]]
+
+			for _, scan := range scansToRun {
+				runner := configFile.Runners[scan]
+				fromConfig, err := runScanFromConfig(runner, target, configFile)
+				if err != nil {
+					return
+				}
+
+				log.Println(fromConfig)
+			}
+		}
+	}
+}
+
+func runScanFromConfig(config RunnerConfig, target string, configFile Config) (string, error) {
+	config.CmdArgs = replaceTemplateArgs(config.CmdArgs, target)
+
+	serviceRes, err := runDockerService(config)
+	if err != nil {
+		return "", err
+	}
+
+	parserRes := sendResultToParser(config.ContainerName, serviceRes)
+
+	runSubsequentScans(parserRes, config, target, configFile)
+
+	return serviceRes, nil
 }
