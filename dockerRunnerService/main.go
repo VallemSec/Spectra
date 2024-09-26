@@ -154,9 +154,12 @@ func CreateContainer(containerName string, containerTag string, containerCommand
 		return "", err
 	}
 
-	if err := cli.ContainerRemove(ctx, resp.ID, container.RemoveOptions{}); err != nil {
-		return "", err
-	}
+	// Remove the container in the background
+	go func() {
+		if err := cli.ContainerRemove(ctx, resp.ID, container.RemoveOptions{}); err != nil {
+			log.Println("Error removing container:", err)
+		}
+	}()
 
 	return output, nil
 }
