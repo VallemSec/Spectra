@@ -18,7 +18,7 @@ type JSONbody struct {
 	Target string `json:"target"`
 }
 
-type Config struct {
+type ConfigFile struct {
 	DiscoveryRunners []string                `yaml:"discovery_runners"`
 	AlwaysRun        []string                `yaml:"always_run"`
 	Runners          map[string]RunnerConfig `yaml:"runners"`
@@ -61,7 +61,7 @@ func main() {
 			return
 		}
 
-		var config Config
+		var config ConfigFile
 		err = yaml.Unmarshal(yamlFile, &config)
 		if err != nil {
 			log.Fatalf("Unmarshal: %v", err)
@@ -97,7 +97,7 @@ func replaceTemplateArgs(args []string, target string) []string {
 	return args
 }
 
-func runDockerService(config RunnerConfig) (string, error) {
+func runDockerService(runConf RunnerConfig) (string, error) {
 	type runnerJSON struct {
 		ContainerName    string   `json:"containerName"`
 		ContainerTag     string   `json:"containerTag"`
@@ -105,9 +105,9 @@ func runDockerService(config RunnerConfig) (string, error) {
 	}
 
 	configJSON := runnerJSON{
-		ContainerName:    config.Image,
-		ContainerTag:     config.ImageVersion,
-		ContainerCommand: config.CmdArgs,
+		ContainerName:    runConf.Image,
+		ContainerTag:     runConf.ImageVersion,
+		ContainerCommand: runConf.CmdArgs,
 	}
 
 	jsonValue, err := json.Marshal(configJSON)
@@ -151,10 +151,10 @@ func sendResultToParser(containerName, containerOutput string) ParserOutputJson 
 	return returnData
 }
 
-func runSubsequentScans(parserOutput ParserOutputJson, config RunnerConfig, target string, configFile Config) {
+func runSubsequentScans(pout ParserOutputJson, rc RunnerConfig, t string, cf ConfigFile) {
 	// get all the keys of results
 	var resultKeys []string
-	for key, _ := range config.Results {
+	for key, _ := range rc.Results {
 		key = strings.ToUpper(key)
 		resultKeys = append(resultKeys, key)
 	}
@@ -163,15 +163,15 @@ func runSubsequentScans(parserOutput ParserOutputJson, config RunnerConfig, targ
 		return
 	}
 
-	for _, vulnerability := range parserOutput.Vulnerabilities {
+	for _, vulnerability := range pout.Vulnerabilities {
 		vulnerabilityPos := slices.Index(resultKeys, vulnerability.ErrShort)
 		if vulnerabilityPos != -1 {
 			// get the scans that need to be run
-			scansToRun := config.Results[resultKeys[vulnerabilityPos]]
+			scansToRun := rc.Results[resultKeys[vulnerabilityPos]]
 
 			for _, scan := range scansToRun {
-				runner := configFile.Runners[scan]
-				_, err := runScanFromConfig(runner, target, configFile)
+				runner := cf.Runners[scan]
+				_, err := runScanFromConfig(runner, t, cf)
 				if err != nil {
 					return
 				}
@@ -180,19 +180,19 @@ func runSubsequentScans(parserOutput ParserOutputJson, config RunnerConfig, targ
 	}
 }
 
-func runScanFromConfig(config RunnerConfig, target string, configFile Config) (string, error) {
-	config.CmdArgs = replaceTemplateArgs(config.CmdArgs, target)
+func runScanFromConfig(rf RunnerConfig, t string, cf ConfigFile) (string, error) {
+	rf.CmdArgs = replaceTemplateArgs(rf.CmdArgs, t)
 
-	fmt.Println("Running scan: ", config.ContainerName)
-	fmt.Println("Args: ", config.CmdArgs)
-	serviceRes, err := runDockerService(config)
+	fmt.Println("Running scan: ", rf.ContainerName)
+	fmt.Println("Args: ", rf.CmdArgs)
+	serviceRes, err := runDockerService(rf)
 	if err != nil {
 		return "", err
 	}
 
-	parserRes := sendResultToParser(config.ContainerName, serviceRes)
+	parserRes := sendResultToParser(rf.ContainerName, serviceRes)
 
-	runSubsequentScans(parserRes, config, target, configFile)
+	runSubsequentScans(parserRes, rf, t, cf)
 
 	return serviceRes, nil
 }
