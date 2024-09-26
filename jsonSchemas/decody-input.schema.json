@@ -24,7 +24,7 @@
               "type": "string"
             }
           },
-          "required": ["err_short", "err_long"]
+          "required": ["err_short"]
         }
       }
     },
