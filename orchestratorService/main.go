@@ -49,8 +49,7 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		yamlFile, err := os.ReadFile("config.yaml")
 		if err != nil {
-			log.Printf("yamlFile.Get err   #%v ", err)
-			return
+			log.Fatalf("yamlFile.Get err   #%v ", err)
 		}
 
 		jsonBody := JSONbody{}
@@ -59,6 +58,7 @@ func main() {
 			log.Println(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			return
 		}
 
 		var config Config
@@ -72,6 +72,9 @@ func main() {
 
 			fromConfig, err := runScanFromConfig(runner, jsonBody.Target, config)
 			if err != nil {
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 				return
 			}
 
@@ -120,7 +123,9 @@ func runDockerService(config RunnerConfig) (string, error) {
 
 	// read the response body
 	body, err := io.ReadAll(resp.Body)
-	log.Println(string(body))
+
+	fmt.Println("Response body: ")
+	fmt.Println(string(body))
 	if err != nil {
 		return "", err
 	}
@@ -154,23 +159,22 @@ func runSubsequentScans(parserOutput ParserOutputJson, config RunnerConfig, targ
 		resultKeys = append(resultKeys, key)
 	}
 
+	if resultKeys == nil {
+		return
+	}
+
 	for _, vulnerability := range parserOutput.Vulnerabilities {
-		fmt.Println(vulnerability)
-		fmt.Println(resultKeys)
 		vulnerabilityPos := slices.Index(resultKeys, vulnerability.ErrShort)
-		fmt.Println(vulnerabilityPos)
 		if vulnerabilityPos != -1 {
 			// get the scans that need to be run
 			scansToRun := config.Results[resultKeys[vulnerabilityPos]]
 
 			for _, scan := range scansToRun {
 				runner := configFile.Runners[scan]
-				fromConfig, err := runScanFromConfig(runner, target, configFile)
+				_, err := runScanFromConfig(runner, target, configFile)
 				if err != nil {
 					return
 				}
-
-				log.Println(fromConfig)
 			}
 		}
 	}
@@ -179,6 +183,8 @@ func runSubsequentScans(parserOutput ParserOutputJson, config RunnerConfig, targ
 func runScanFromConfig(config RunnerConfig, target string, configFile Config) (string, error) {
 	config.CmdArgs = replaceTemplateArgs(config.CmdArgs, target)
 
+	fmt.Println("Running scan: ", config.ContainerName)
+	fmt.Println("Args: ", config.CmdArgs)
 	serviceRes, err := runDockerService(config)
 	if err != nil {
 		return "", err
