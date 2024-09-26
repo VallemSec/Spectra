@@ -1,8 +1,11 @@
 # Start from the latest golang base image for building the application
-FROM golang:1.23 AS builder
+FROM golang:1.23-alpine AS builder
 
 # Set the Current Working Directory inside the container
 WORKDIR /app
+
+# Install git and other dependencies
+RUN apk add --no-cache git
 
 # Copy go mod and sum files
 COPY go.mod go.sum ./
@@ -17,10 +20,10 @@ COPY . .
 RUN go build -o main .
 
 # Start a new stage from a smaller base image
-FROM debian:latest
+FROM alpine:latest
 
 # Install necessary dependencies for the Go binary
-RUN apt-get update && apt-get install -y ca-certificates
+RUN apk add --no-cache ca-certificates
 
 # Set the Current Working Directory inside the container
 WORKDIR /root/
