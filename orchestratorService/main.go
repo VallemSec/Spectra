@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v2"
 )
 
@@ -46,14 +47,28 @@ type vulnerability struct {
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		yamlFile, err := os.ReadFile("config.yaml")
 		if err != nil {
 			log.Fatalf("yamlFile.Get err   #%v ", err)
 		}
 
-		jsonBody := JSONbody{}
+		var jsonBody JSONbody
 		err = json.NewDecoder(r.Body).Decode(&jsonBody)
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			return
+		}
+
+		// normalize the target
+		jsonBody.Target, err = normalizeTarget(jsonBody.Target)
 		if err != nil {
 			log.Println(err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -82,7 +97,7 @@ func main() {
 		}
 	})
 
-	err := http.ListenAndServe(":8080", nil)
+	err = http.ListenAndServe(":8080", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -118,7 +133,7 @@ func runDockerService(runConf RunnerConfig) (string, error) {
 	}
 
 	// send the request to the dockerRunnerService
-	resp, err := http.Post("http://localhost:8008", "application/json", bytes.NewBuffer(jsonValue))
+	resp, err := http.Post("http://"+os.Getenv("DOCKER_RUNNER_SERVICE"), "application/json", bytes.NewBuffer(jsonValue))
 	if err != nil {
 		return "", err
 	}
@@ -199,4 +214,23 @@ func runScanFromConfig(rf RunnerConfig, t string, cf ConfigFile) (string, error)
 	runSubsequentScans(pr, rf, t, cf)
 
 	return sr, nil
+}
+
+func normalizeTarget(target string) (string, error) {
+	if target == "" {
+		return "", fmt.Errorf("target is empty")
+	}
+
+	// strip the protocol from the target
+	if strings.HasPrefix(target, "http://") || strings.HasPrefix(target, "https://") {
+		target = strings.TrimPrefix(target, "http://")
+		target = strings.TrimPrefix(target, "https://")
+	}
+
+	// strip the path from the target
+	if strings.Contains(target, "/") {
+		target = strings.Split(target, "/")[0]
+	}
+
+	return target, nil
 }
