@@ -11,6 +11,9 @@ import (
 	"slices"
 	"strings"
 
+	"main/types"
+	"main/utils"
+
 	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v2"
 )
@@ -18,19 +21,24 @@ import (
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Fatal("Error loading .env file, exiting....")
+	}
+
+	// check if the DOCKER_RUNNER_SERVICE environment variable is set
+	if os.Getenv("DOCKER_RUNNER_SERVICE") == "" {
+		log.Fatal("DOCKER_RUNNER_SERVICE environment variable is not set, exiting....")
 	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		var jsonBody JSONbody
-		var config ConfigFile
+		var jsonBody types.JSONbody
+		var config types.ConfigFile
 		yamlFile, err := os.ReadFile("config.yaml")
 		if err != nil {
 			log.Fatalf("Could not read config.yaml read error: %v", err)
 		}
 
 		err = json.NewDecoder(r.Body).Decode(&jsonBody)
-		jsonBody.Target, err = normalizeTarget(jsonBody.Target)
+		jsonBody.Target, err = utils.NormalizeTarget(jsonBody.Target)
 		if err != nil {
 			log.Println(err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -64,19 +72,9 @@ func main() {
 	}
 }
 
-// this function replaces the template arguments in the command arguments with set values like the target
-func replaceTemplateArgs(args []string, target string) []string {
-	for i, arg := range args {
-		if arg == "{{req_domain}}" {
-			args[i] = target
-		}
-	}
-	return args
-}
-
 // this function kicks off a docker container with the given configuration and returns the output of the container
-func runDockerService(runConf RunnerConfig) (string, error) {
-	configJSON := runnerJSON{
+func runDockerService(runConf types.RunnerConfig) (string, error) {
+	configJSON := types.RunnerJSON{
 		ContainerName:    runConf.Image,
 		ContainerTag:     runConf.ImageVersion,
 		ContainerCommand: runConf.CmdArgs,
@@ -107,11 +105,11 @@ func runDockerService(runConf RunnerConfig) (string, error) {
 }
 
 // TODO: implement the function without sample data
-func sendResultToParser(containerName, containerOutput string) ParserOutputJson {
+func sendResultToParser(containerName, containerOutput string) types.ParserOutputJson {
 	// send the result to the parser
-	returnData := ParserOutputJson{
+	returnData := types.ParserOutputJson{
 		ScannerName: containerName,
-		Vulnerabilities: []vulnerability{
+		Vulnerabilities: []types.Vulnerability{
 			{
 				ErrShort: "HTTP",
 				ErrLong:  "{\\\"80\\\": {\\\"name\\\": \\\"http\\\"}",
@@ -125,7 +123,7 @@ func sendResultToParser(containerName, containerOutput string) ParserOutputJson 
 // this runs scans if the initials scans have vulnerabilities that require subsequent scans
 // it runs the scans that are in the results map of the runner config
 // TODO: send parsed results to decody
-func runSubsequentScans(pout ParserOutputJson, rc RunnerConfig, t string, cf ConfigFile) {
+func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t string, cf types.ConfigFile) {
 	// get all the keys of results
 	var resultKeys []string
 	for key, _ := range rc.Results {
@@ -154,8 +152,8 @@ func runSubsequentScans(pout ParserOutputJson, rc RunnerConfig, t string, cf Con
 	}
 }
 
-func runScanFromConfig(rf RunnerConfig, t string, cf ConfigFile) (string, error) {
-	rf.CmdArgs = replaceTemplateArgs(rf.CmdArgs, t)
+func runScanFromConfig(rf types.RunnerConfig, t string, cf types.ConfigFile) (string, error) {
+	rf.CmdArgs = utils.ReplaceTemplateArgs(rf.CmdArgs, t)
 
 	fmt.Println("Running scan: ", rf.ContainerName)
 	fmt.Println("Args: ", rf.CmdArgs)
@@ -169,23 +167,4 @@ func runScanFromConfig(rf RunnerConfig, t string, cf ConfigFile) (string, error)
 	runSubsequentScans(pr, rf, t, cf)
 
 	return sr, nil
-}
-
-func normalizeTarget(target string) (string, error) {
-	if target == "" {
-		return "", fmt.Errorf("target is empty")
-	}
-
-	// strip the protocol from the target
-	if strings.HasPrefix(target, "http://") || strings.HasPrefix(target, "https://") {
-		target = strings.TrimPrefix(target, "http://")
-		target = strings.TrimPrefix(target, "https://")
-	}
-
-	// strip the path from the target
-	if strings.Contains(target, "/") {
-		target = strings.Split(target, "/")[0]
-	}
-
-	return target, nil
 }

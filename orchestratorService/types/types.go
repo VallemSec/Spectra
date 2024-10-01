@@ -1,4 +1,4 @@
-package main
+package types
 
 type JSONbody struct {
 	Target string `json:"target"`
@@ -23,15 +23,15 @@ type RunnerConfig struct {
 
 type ParserOutputJson struct {
 	ScannerName     string          `json:"scanner_name"`
-	Vulnerabilities []vulnerability `json:"vulnerabilities"`
+	Vulnerabilities []Vulnerability `json:"vulnerabilities"`
 }
 
-type vulnerability struct {
+type Vulnerability struct {
 	ErrShort string `json:"err_short"`
 	ErrLong  string `json:"err_long"`
 }
 
-type runnerJSON struct {
+type RunnerJSON struct {
 	ContainerName    string   `json:"containerName"`
 	ContainerTag     string   `json:"containerTag"`
 	ContainerCommand []string `json:"containerCommand"`
