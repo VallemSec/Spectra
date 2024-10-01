@@ -16,6 +16,7 @@ func ReplaceTemplateArgs(args []string, target string) []string {
 }
 
 // NormalizeTarget normalizes the target by stripping the protocol and path from the target.
+// The target is returned in lowercase and must not be empty.
 func NormalizeTarget(target string) (string, error) {
 	if target == "" {
 		return "", fmt.Errorf("target is empty")

@@ -120,7 +120,7 @@ func sendResultToParser(containerName, containerOutput string) types.ParserOutpu
 	return returnData
 }
 
-// this runs scans if the initials scans have vulnerabilities that require subsequent scans
+// runSubsequentScans runs scans if the initials scans have vulnerabilities that require subsequent scans
 // it runs the scans that are in the results map of the runner config
 // TODO: send parsed results to decody
 func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t string, cf types.ConfigFile) {
