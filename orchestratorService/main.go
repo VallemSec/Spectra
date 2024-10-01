@@ -53,21 +53,14 @@ func main() {
 	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		var jsonBody JSONbody
+		var config ConfigFile
 		yamlFile, err := os.ReadFile("config.yaml")
 		if err != nil {
-			log.Fatalf("yamlFile.Get err   #%v ", err)
+			log.Fatalf("Could not read config.yaml read error: %v", err)
 		}
 
-		var jsonBody JSONbody
 		err = json.NewDecoder(r.Body).Decode(&jsonBody)
-		if err != nil {
-			log.Println(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-			return
-		}
-
-		// normalize the target
 		jsonBody.Target, err = normalizeTarget(jsonBody.Target)
 		if err != nil {
 			log.Println(err)
@@ -76,10 +69,9 @@ func main() {
 			return
 		}
 
-		var config ConfigFile
 		err = yaml.Unmarshal(yamlFile, &config)
 		if err != nil {
-			log.Fatalf("Unmarshal: %v", err)
+			log.Fatalf("Failed to unmarshall the config, this is typically due to a malformed config Unmarshalling error: %v", err)
 		}
 
 		for _, runnerName := range config.DiscoveryRunners {
