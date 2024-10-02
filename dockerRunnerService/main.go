@@ -9,17 +9,12 @@ import (
 	"github.com/docker/docker/client"
 	"io"
 	"log"
+	"main/ansi"
+	"main/docker"
 	"net/http"
 	"os"
-	"regexp"
 	"strings"
 )
-
-// StripANSI removes ANSI escape codes from a string
-func StripANSI(input string) string {
-	re := regexp.MustCompile(`\x1b\[[0-9;]*m`)
-	return re.ReplaceAllString(input, "")
-}
 
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -62,7 +57,7 @@ func main() {
 		// Split the output into separate lines and strip ANSI codes
 		lines := strings.Split(out, "\n")
 		for i, line := range lines {
-			lines[i] = StripANSI(line)
+			lines[i] = ansi.Strip(line)
 		}
 
 		// return the output of the container as the response in JSON format
@@ -84,27 +79,14 @@ func CreateContainer(containerName string, containerTag string, containerCommand
 	}
 	defer cli.Close()
 
-	// Check if the image is already available locally
 	images, err := cli.ImageList(ctx, image.ListOptions{})
 	if err != nil {
 		return "", err
 	}
 
-	if strings.HasPrefix(containerName, ":") {
-		containerName = containerName[1:]
-	}
-
-	imageFound := false
-	for _, image := range images {
-		for _, tag := range image.RepoTags {
-			if tag == containerName+":"+containerTag {
-				imageFound = true
-				break
-			}
-		}
-		if imageFound {
-			break
-		}
+	imageFound, err := docker.CheckLocalImg(ctx, cli, containerName+":"+containerTag)
+	if err != nil {
+		return "", err
 	}
 
 	// Pull the image from docker.io if it's not found locally
@@ -117,32 +99,7 @@ func CreateContainer(containerName string, containerTag string, containerCommand
 		io.Copy(os.Stdout, reader)
 	}
 
-	resp, err := cli.ContainerCreate(ctx, &container.Config{
-		Image: containerName,
-		Cmd:   containerCommand,
-		Tty:   false,
-	}, nil, nil, nil, "")
-	if err != nil {
-		return "", err
-	}
-
-	if err := cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
-		return "", err
-	}
-
-	statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
-	select {
-	case err := <-errCh:
-		if err != nil {
-			return "", err
-		}
-	case <-statusCh:
-	}
-
-	out, err := cli.ContainerLogs(ctx, resp.ID, container.LogsOptions{ShowStdout: true, ShowStderr: true})
-	if err != nil {
-		return "", err
-	}
+	out, err := docker.StartAndReadLogs(ctx, cli, containerName, containerCommand)
 
 	var output string
 	scanner := bufio.NewScanner(out)
