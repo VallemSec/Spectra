@@ -79,11 +79,6 @@ func CreateContainer(containerName string, containerTag string, containerCommand
 	}
 	defer cli.Close()
 
-	images, err := cli.ImageList(ctx, image.ListOptions{})
-	if err != nil {
-		return "", err
-	}
-
 	imageFound, err := docker.CheckLocalImg(ctx, cli, containerName+":"+containerTag)
 	if err != nil {
 		return "", err
@@ -99,7 +94,7 @@ func CreateContainer(containerName string, containerTag string, containerCommand
 		io.Copy(os.Stdout, reader)
 	}
 
-	out, err := docker.StartAndReadLogs(ctx, cli, containerName, containerCommand)
+	out, containerId, err := docker.StartAndReadLogs(ctx, cli, containerName, containerCommand)
 
 	var output string
 	scanner := bufio.NewScanner(out)
@@ -113,7 +108,7 @@ func CreateContainer(containerName string, containerTag string, containerCommand
 
 	// Remove the container in the background
 	go func() {
-		if err := cli.ContainerRemove(ctx, resp.ID, container.RemoveOptions{}); err != nil {
+		if err := cli.ContainerRemove(ctx, containerId, container.RemoveOptions{}); err != nil {
 			log.Println("Error removing container:", err)
 		}
 	}()

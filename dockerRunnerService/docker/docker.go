@@ -10,15 +10,15 @@ import (
 	"io"
 )
 
-func CheckLocalImg(ctx context.Context, client *client.Client, imageName string) (bool, error) {
-	images, err := client.ImageList(ctx, image.ListOptions{})
+func CheckLocalImg(ctx context.Context, c *client.Client, iN string) (bool, error) {
+	images, err := c.ImageList(ctx, image.ListOptions{})
 	if err != nil {
 		return false, err
 	}
 
 	for _, img := range images {
 		for _, tag := range img.RepoTags {
-			if tag == imageName {
+			if tag == iN {
 				return true, nil
 			}
 		}
@@ -27,33 +27,33 @@ func CheckLocalImg(ctx context.Context, client *client.Client, imageName string)
 	return false, nil
 }
 
-func StartAndReadLogs(ctx context.Context, client *client.Client, containerName string, containerCommand []string) (string, error) {
-	resp, err := client.ContainerCreate(ctx, &container.Config{
+func StartAndReadLogs(ctx context.Context, c *client.Client, containerName string, containerCommand []string) (*bytes.Buffer, string, error) {
+	resp, err := c.ContainerCreate(ctx, &container.Config{
 		Image: containerName,
 		Cmd:   containerCommand,
 		Tty:   false,
 	}, nil, nil, nil, "")
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
 
-	err = client.ContainerStart(ctx, resp.ID, container.StartOptions{})
+	err = c.ContainerStart(ctx, resp.ID, container.StartOptions{})
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
 
-	statusCh, errCh := client.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
+	statusCh, errCh := c.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
 	select {
 	case err := <-errCh:
 		if err != nil {
-			return "", err
+			return nil, "", err
 		}
 	case <-statusCh:
 	}
 
-	out, err := client.ContainerLogs(ctx, resp.ID, container.LogsOptions{ShowStdout: true, ShowStderr: true, Follow: true})
+	out, err := c.ContainerLogs(ctx, resp.ID, container.LogsOptions{ShowStdout: true, ShowStderr: true, Follow: true})
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
 
 	defer out.Close()
@@ -61,8 +61,8 @@ func StartAndReadLogs(ctx context.Context, client *client.Client, containerName 
 	buf := new(bytes.Buffer)
 	_, err = io.Copy(buf, out)
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
 
-	return buf.String(), nil
+	return buf, resp.ID, nil
 }
