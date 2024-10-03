@@ -10,6 +10,8 @@ parser.add_argument("target",
                     help="""Which parser file(s) to use.
                     You can specify either a file or directory""")
 parser.add_argument("input", help="STDOUT of the tools that you want to parse")
+parser.add_argument("-t", "--type", choices=["discovery", "vulnerability"],
+                    default="vulnerability", help="Which parser output type to use")
 
 args = parser.parse_args()
 
@@ -35,4 +37,7 @@ for thread in lua_parser_threads:
 print(json.dumps({
     "name": args.name,
     "vulnerabilities": results
+} if args.type == "vulnerability" else {
+    "name": args.name,
+    "discovered": results
 }))
