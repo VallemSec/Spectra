@@ -54,11 +54,8 @@ func main() {
 			return
 		}
 
-		// Split the output into separate lines and strip ANSI codes
+		ansi.Strip(out)
 		lines := strings.Split(out, "\n")
-		for i, line := range lines {
-			lines[i] = ansi.Strip(line)
-		}
 
 		// return the output of the container as the response in JSON format
 		w.Header().Set("Content-Type", "application/json")
