@@ -27,12 +27,16 @@ func main() {
 	// check if the DOCKER_RUNNER_SERVICE environment variable is set
 	if os.Getenv("DOCKER_RUNNER_SERVICE") == "" {
 		log.Fatal("DOCKER_RUNNER_SERVICE environment variable is not set, exiting....")
+	} else if os.Getenv("CONFIG_FILE") == "" {
+		log.Fatal("CONFIG_FILE environment variable is not set, exiting....")
 	}
+
+	configFileName := os.Getenv("CONFIG_FILE")
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		var jsonBody types.JSONbody
 		var config types.ConfigFile
-		yamlFile, err := os.ReadFile("config.yaml")
+		yamlFile, err := os.ReadFile(configFileName)
 		if err != nil {
 			log.Fatalf("Could not read config.yaml read error: %v", err)
 		}
