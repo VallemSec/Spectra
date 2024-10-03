@@ -22,7 +22,8 @@ class Parser:
 
 
     def parse(self):
-        self._result = self._parse_to_dict(self._parser_func(self._parser_input))
+        self._result = self._parse_to_dict(
+            self._parser_func(self._parser_input))
 
 
     @staticmethod
