@@ -1,19 +1,38 @@
-from lupa import LuaRuntime
+from lua_parser import Parser, ParserFinder
+import argparse
+import threading
+import json
 
 
-def parse_to_dict(lua_table):
-    lua_dict, lua_list = dict(lua_table), list()
-    for value in lua_dict.values():
-        lua_list.append(dict(value))
-    return lua_list
+parser = argparse.ArgumentParser()
+parser.add_argument("name", help="Name to give to the output")
+parser.add_argument("target",
+                    help="""Which parser file(s) to use.
+                    You can specify either a file or directory""")
+parser.add_argument("input", help="STDOUT of the tools that you want to parse")
 
+args = parser.parse_args()
 
-# Load the runtime and disable access to python objects
-lua = LuaRuntime(unpack_returned_tuples=True)
-lua.eval("function() python = nil; end")()
+pf = ParserFinder(args.target)
 
-with open("test.lua", "r") as f:
-    parser_func = lua.eval(f.read())
+lua_parser_threads = []
+for parser_file in pf.yield_parsers():
+    lua_parser = Parser(parser_file, args.input)
+    thread = threading.Thread(target=lua_parser.parse)
+    lua_parser_threads.append({"thread": thread, "parser": lua_parser})
+    thread.start()
 
-# print(lua_table_to_dict(parser_func(["test", "a", "b"], "test")))
-print(parse_to_dict(parser_func("hello world\nBye world\nTesting 123")))
+thread_active = [True for _ in range(len(lua_parser_threads))]
+while True in thread_active:
+    for i, thread in enumerate(lua_parser_threads):
+        if not thread["thread"].is_alive():
+            thread_active[i] = False
+
+results = []
+for thread in lua_parser_threads:
+    results += thread["parser"].result
+
+print(json.dumps({
+    "name": args.name,
+    "vulnerabilities": results
+}))

@@ -1,5 +1,5 @@
 function(input)
-    output = {}
+    local output = {}
 
     for line in input:gmatch("([^\n]*)\n?") do
         if #line > 0 then  -- Ensure the line is not empty
