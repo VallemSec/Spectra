@@ -22,13 +22,13 @@ type RunnerConfig struct {
 }
 
 type ParserOutputJson struct {
-	ScannerName     string          `json:"scanner_name"`
-	Vulnerabilities []Vulnerability `json:"vulnerabilities"`
+	ScannerName string   `json:"scanner_name"`
+	Results     []Result `json:"results"`
 }
 
-type Vulnerability struct {
-	ErrShort string `json:"err_short"`
-	ErrLong  string `json:"err_long"`
+type Result struct {
+	Short string `json:"short"`
+	Long  string `json:"long"`
 }
 
 type RunnerJSON struct {

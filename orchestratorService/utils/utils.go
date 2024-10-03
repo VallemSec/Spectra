@@ -53,3 +53,29 @@ func NormalizeTarget(target string) (string, error) {
 
 	return target, nil
 }
+
+func OccurrencesInSlice(s string, slice []string) int {
+	count := 0
+	for _, item := range slice {
+		if item == s {
+			count++
+		}
+	}
+	return count
+}
+
+func SubsequentOccurrences(s string, slice []string) int {
+	maxCount := 0
+	currentCount := 0
+	for _, item := range slice {
+		if item == s {
+			currentCount++
+			if currentCount > maxCount {
+				maxCount = currentCount
+			}
+		} else {
+			currentCount = 0
+		}
+	}
+	return maxCount
+}

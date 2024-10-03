@@ -18,6 +18,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+var previousScans []string
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
@@ -113,10 +115,10 @@ func sendResultToParser(containerName, containerOutput string) types.ParserOutpu
 	// send the result to the parser
 	returnData := types.ParserOutputJson{
 		ScannerName: containerName,
-		Vulnerabilities: []types.Vulnerability{
+		Results: []types.Result{
 			{
-				ErrShort: "HTTP",
-				ErrLong:  "{\\\"80\\\": {\\\"name\\\": \\\"http\\\"}",
+				Short: "HTTP",
+				Long:  "{\\\"80\\\": {\\\"name\\\": \\\"http\\\"}",
 			},
 		},
 	}
@@ -139,12 +141,11 @@ func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t st
 		return
 	}
 
-	for _, vulnerability := range pout.Vulnerabilities {
-		vulnerabilityPos := slices.Index(resultKeys, vulnerability.ErrShort)
+	for _, vulnerability := range pout.Results {
+		vulnerabilityPos := slices.Index(resultKeys, vulnerability.Short)
 		if vulnerabilityPos != -1 { // if there is a match of the vulnerability in the results
 			// get the scans that need to be run
 			scansToRun := rc.Results[resultKeys[vulnerabilityPos]]
-
 			for _, scan := range scansToRun {
 				runner := cf.Runners[scan]
 				_, err := runScanFromConfig(runner, t, cf)
@@ -156,8 +157,18 @@ func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t st
 	}
 }
 
+// runScanFromConfig runs a scan from the configuration file
+// if the scan has results that require subsequent scans, it runs the subsequent scans
+// it returns the output of the scan
+// it also protects against infinite recursion by keeping track of the scans that have been run and stopping if a scan if it's been run 3 times
 func runScanFromConfig(rf types.RunnerConfig, t string, cf types.ConfigFile) (string, error) {
 	rf.CmdArgs = utils.ReplaceTemplateArgs(rf.CmdArgs, t)
+	previousScans = append(previousScans, rf.ContainerName)
+
+	// if the scan has been run 3 times after each other, stop the scan
+	if utils.SubsequentOccurrences(rf.ContainerName, previousScans) > 3 {
+		return "", fmt.Errorf("scan has a loop %s, exiting. This happens when a scan is run 3 times without one in the middle", rf.ContainerName)
+	}
 
 	fmt.Println("Running scan: ", rf.ContainerName)
 	fmt.Println("Args: ", rf.CmdArgs)
