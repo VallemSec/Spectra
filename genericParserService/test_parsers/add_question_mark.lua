@@ -7,7 +7,7 @@ function(input)
 
     for line in input:gmatch("([^\n]*)\n?") do
         if #line > 0 then  -- Ensure the line is not empty
-            table.insert(output, {err_short = "random_err", err_long = line .. "?"})
+            table.insert(output, {short = "random_err", long = line .. "?"})
         end
     end
 
