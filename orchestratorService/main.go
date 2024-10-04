@@ -29,11 +29,11 @@ func main() {
 	// check if the DOCKER_RUNNER_SERVICE environment variable is set
 	if os.Getenv("DOCKER_RUNNER_SERVICE") == "" {
 		log.Fatal("DOCKER_RUNNER_SERVICE environment variable is not set, exiting....")
-	} else if os.Getenv("CONFIG_FILE") == "" {
-		log.Fatal("CONFIG_FILE environment variable is not set, exiting....")
+	} else if os.Getenv("CONFIG_FILE_PATH") == "" {
+		log.Fatal("CONFIG_FILE_PATH environment variable is not set, exiting....")
 	}
 
-	configFileName := os.Getenv("CONFIG_FILE")
+	configFileName := os.Getenv("CONFIG_FILE_PATH")
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		var jsonBody types.JSONbody
