@@ -1,16 +1,18 @@
 from lupa import LuaRuntime
+import os
 
 from lua_parser.parser_finder import ParserFinder
 
 
 class Parser:
-    def __init__(self, parser_file: str, parser_input: str):
+    def __init__(self, parser_file: str, parser_input: str, parser_folder: str):
         self._parser_input = parser_input
 
         self._lua = LuaRuntime(unpack_returned_tuples=True)
         self._lua.eval("function() python = nil; end")()
 
-        with open(parser_file, "r", encoding="utf-8") as f:
+        with open(os.path.join(parser_folder.rstrip("/"), parser_file),
+                  "r", encoding="utf-8") as f:
             self._parser_func = self._lua.eval(f.read())
 
         self._result = None

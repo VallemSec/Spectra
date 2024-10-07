@@ -2,6 +2,14 @@ from lua_parser import Parser, ParserFinder
 import argparse
 import threading
 import json
+import os
+
+
+PARSER_FOLDER = os.getenv('PARSER_FOLDER')
+if PARSER_FOLDER is None:
+    raise ValueError("PARSER_FOLDER environment variable is not set")
+if not os.path.exists(PARSER_FOLDER):
+    raise ValueError("Expected PARSER_FOLDER to be an existing path")
 
 
 parser = argparse.ArgumentParser()
@@ -13,11 +21,11 @@ parser.add_argument("input", help="STDOUT of the tools that you want to parse")
 
 args = parser.parse_args()
 
-pf = ParserFinder(args.target)
+pf = ParserFinder(args.target, PARSER_FOLDER)
 
 lua_parser_threads = []
 for parser_file in pf.yield_parsers():
-    lua_parser = Parser(parser_file, args.input)
+    lua_parser = Parser(parser_file, args.input, PARSER_FOLDER)
     thread = threading.Thread(target=lua_parser.parse)
     lua_parser_threads.append({"thread": thread, "parser": lua_parser})
     thread.start()
