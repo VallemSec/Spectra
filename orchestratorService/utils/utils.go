@@ -3,16 +3,56 @@ package utils
 import (
 	"fmt"
 	"strings"
+	"sync"
 )
 
 // ReplaceTemplateArgs replaces the template arguments in the command arguments with the target.
-func ReplaceTemplateArgs(args []string, target string) []string {
+// {{req_domain}} is replaced with the target.
+// {{pass_results}} is replaced with the first result in the results array and makes a long space seperated string out of all the results.
+// {{[pass_results]}} will return an array of args to run multiple scans with the results.
+func ReplaceTemplateArgs(args []string, t string, res []string) [][]string {
+	mayPassMultiple := OccurrencesInSlice("{{[pass_results]}}", args) > 0
+
+	willPassAmount := 0
+	if mayPassMultiple {
+		willPassAmount = len(res)
+	}
+
+	// replace the target in the command arguments
 	for i, arg := range args {
 		if arg == "{{req_domain}}" {
-			args[i] = target
+			args[i] = t
+		}
+		if arg == "{{pass_results}}" {
+			args[i] = strings.Join(res, " ")
+		}
+		if arg == "{{[pass_results]}}" {
+			args[i] = ""
 		}
 	}
-	return args
+
+	// if there are multiple results, create multiple command arguments
+	if willPassAmount > 1 {
+		var wg sync.WaitGroup
+		newArgs := make([][]string, willPassAmount)
+		for i := 0; i < willPassAmount; i++ {
+			wg.Add(1)
+			go func(i int) {
+				defer wg.Done()
+				newArgs[i] = make([]string, len(args))
+				copy(newArgs[i], args)
+				for j, arg := range newArgs[i] {
+					if arg == "" {
+						newArgs[i][j] = res[i]
+					}
+				}
+			}(i)
+		}
+		wg.Wait()
+		return newArgs
+	}
+
+	return [][]string{args}
 }
 
 // NormalizeTarget normalizes the target by stripping the protocol and path from the target.

@@ -1,5 +1,10 @@
 package types
 
+import (
+	"encoding/json"
+	"fmt"
+)
+
 type JSONbody struct {
 	Target string `json:"target"`
 }
@@ -30,6 +35,37 @@ type Result struct {
 	Short   string   `json:"short"`
 	Long    string   `json:"long"`
 	PassRes []string `json:"pass_results"`
+}
+
+func (r *Result) UnmarshalJSON(data []byte) error {
+	type Alias Result
+	aux := &struct {
+		PassResults interface{} `json:"pass_results"`
+		*Alias
+	}{
+		Alias: (*Alias)(r),
+	}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	switch v := aux.PassResults.(type) {
+	case string:
+		r.PassRes = []string{v}
+	case []interface{}:
+		for _, item := range v {
+			if str, ok := item.(string); ok {
+				r.PassRes = append(r.PassRes, str)
+			} else {
+				return fmt.Errorf("unexpected type for pass_results field")
+			}
+		}
+	default:
+		return fmt.Errorf("unexpected type for pass_results field")
+	}
+
+	return nil
 }
 
 type RunnerJSON struct {

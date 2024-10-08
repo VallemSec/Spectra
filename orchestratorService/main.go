@@ -10,6 +10,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"sync"
 
 	"main/types"
 	"main/utils"
@@ -60,7 +61,7 @@ func main() {
 		for _, runnerName := range config.DiscoveryRunners {
 			runner := config.Runners[runnerName]
 
-			fromConfig, err := runScanFromConfig(runner, jsonBody.Target, config)
+			fromConfig, err := runScanFromConfig(runner, jsonBody.Target, config, nil)
 			if err != nil {
 				log.Println(err)
 				w.WriteHeader(http.StatusInternalServerError)
@@ -76,6 +77,76 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+// runScanFromConfig runs a scan from the configuration file
+// if the scan has results that require subsequent scans, it runs the subsequent scans
+// it returns the output of the scan
+// it also protects against infinite recursion by keeping track of the scans that have been run and stopping if a scan if it's been run 3 times
+func runScanFromConfig(rf types.RunnerConfig, t string, cf types.ConfigFile, res []string) (string, error) {
+	replacedArgs := utils.ReplaceTemplateArgs(rf.CmdArgs, t, res)
+	if len(replacedArgs) == 1 {
+		rf.CmdArgs = replacedArgs[0]
+	} else {
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+		var combinedResults []string
+		var combinedErr error
+
+		for _, arg := range replacedArgs {
+			wg.Add(1)
+			go func(arg []string) {
+				defer wg.Done()
+				rf.CmdArgs = arg
+				result, err := runScanFromConfig(rf, t, cf, res)
+				mu.Lock()
+				defer mu.Unlock()
+				if err != nil {
+					combinedErr = err
+				} else {
+					combinedResults = append(combinedResults, result)
+				}
+			}(arg)
+		}
+		wg.Wait()
+
+		if combinedErr != nil {
+			return "", combinedErr
+		}
+		return strings.Join(combinedResults, "\n"), nil
+	}
+
+	previousScans = append(previousScans, rf.ContainerName)
+
+	if utils.SubsequentOccurrences(rf.ContainerName, previousScans) > 3 {
+		return "", fmt.Errorf("scan has a loop %s, exiting. This happens when a scan is run 3 times without one in the middle", rf.ContainerName)
+	}
+
+	fmt.Println("Running scan: ", rf.ContainerName)
+	fmt.Println("Args: ", rf.CmdArgs)
+	sr, err := runDockerService(rf)
+	if err != nil {
+		return "", err
+	}
+
+	sr = `[
+		{
+			"short": "VULN-001",
+			"long": "Description of vulnerability 001",
+			"pass_results": "SinglePassResult"
+		},
+		{
+			"short": "HTTP",
+			"long": "{\\\"80\\\": {\\\"name\\\": \\\"http\\\"}",
+			"pass_results": ["PassResult1", "PassResult2"]
+		}
+	]`
+
+	pr := sendResultToParser(rf.ContainerName, sr)
+
+	runSubsequentScans(pr, rf, t, cf)
+
+	return sr, nil
 }
 
 // this function kicks off a docker container with the given configuration and returns the output of the container
@@ -142,58 +213,19 @@ func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t st
 		return
 	}
 
-	for _, vulnerability := range pout.Results {
-		vulnerabilityPos := slices.Index(resultKeys, vulnerability.Short)
-		if vulnerabilityPos != -1 { // if there is a match of the vulnerability in the results
+	for _, result := range pout.Results {
+		vulnerabilityPos := slices.Index(resultKeys, result.Short)
+
+		if vulnerabilityPos != -1 { // if there is a match of the result in the results
 			// get the scans that need to be run
 			scansToRun := rc.Results[resultKeys[vulnerabilityPos]]
 			for _, scan := range scansToRun {
 				runner := cf.Runners[scan]
-				_, err := runScanFromConfig(runner, t, cf)
+				_, err := runScanFromConfig(runner, t, cf, result.PassRes)
 				if err != nil {
 					return
 				}
 			}
 		}
 	}
-}
-
-// runScanFromConfig runs a scan from the configuration file
-// if the scan has results that require subsequent scans, it runs the subsequent scans
-// it returns the output of the scan
-// it also protects against infinite recursion by keeping track of the scans that have been run and stopping if a scan if it's been run 3 times
-func runScanFromConfig(rf types.RunnerConfig, t string, cf types.ConfigFile) (string, error) {
-	rf.CmdArgs = utils.ReplaceTemplateArgs(rf.CmdArgs, t)
-	previousScans = append(previousScans, rf.ContainerName)
-
-	// if the scan has been run 3 times after each other, stop the scan
-	if utils.SubsequentOccurrences(rf.ContainerName, previousScans) > 3 {
-		return "", fmt.Errorf("scan has a loop %s, exiting. This happens when a scan is run 3 times without one in the middle", rf.ContainerName)
-	}
-
-	fmt.Println("Running scan: ", rf.ContainerName)
-	fmt.Println("Args: ", rf.CmdArgs)
-	sr, err := runDockerService(rf)
-	if err != nil {
-		return "", err
-	}
-
-	sr = `[
-	  {
-		"short": "VULN-001",
-		"long": "Description of vulnerability 001",
-		"pass_results": "SinglePassResult"
-	  },
-	  {
-		"short": "HTTP",
-		"long": "{\\\"80\\\": {\\\"name\\\": \\\"http\\\"}",
-		"pass_results": ["PassResult1", "PassResult2"]
-	  }
-	]`
-
-	pr := sendResultToParser(rf.ContainerName, sr)
-
-	runSubsequentScans(pr, rf, t, cf)
-
-	return sr, nil
 }
