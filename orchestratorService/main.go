@@ -22,12 +22,10 @@ import (
 var previousScans []string
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
+	if err := godotenv.Load(); err != nil {
 		log.Fatal("Error loading .env file, exiting....")
 	}
 
-	// check if the DOCKER_RUNNER_SERVICE environment variable is set
 	if os.Getenv("DOCKER_RUNNER_SERVICE") == "" {
 		log.Fatal("DOCKER_RUNNER_SERVICE environment variable is not set, exiting....")
 	} else if os.Getenv("CONFIG_FILE_PATH") == "" {
@@ -39,6 +37,7 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		var jsonBody types.JSONbody
 		var config types.ConfigFile
+
 		yamlFile, err := os.ReadFile(configFileName)
 		if err != nil {
 			log.Fatalf("Could not read config.yaml read error: %v", err)
@@ -53,8 +52,7 @@ func main() {
 			return
 		}
 
-		err = yaml.Unmarshal(yamlFile, &config)
-		if err != nil {
+		if err := yaml.Unmarshal(yamlFile, &config); err != nil {
 			log.Fatalf("Failed to unmarshall the config, this is typically due to a malformed config Unmarshalling error: %v", err)
 		}
 
@@ -73,8 +71,7 @@ func main() {
 		}
 	})
 
-	err = http.ListenAndServe(":8080", nil)
-	if err != nil {
+	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -162,49 +159,41 @@ func runDockerService(runConf types.RunnerConfig) (string, error) {
 		return "", err
 	}
 
-	// send the request to the dockerRunnerService
 	resp, err := http.Post("http://"+os.Getenv("DOCKER_RUNNER_SERVICE"), "application/json", bytes.NewBuffer(jsonValue))
 	if err != nil {
 		return "", err
 	}
 
-	// read the response body
 	body, err := io.ReadAll(resp.Body)
-
-	fmt.Println("Response body: ")
-	fmt.Println(string(body))
 	if err != nil {
 		return "", err
 	}
 
-	// return the response body
+	fmt.Println("Response body: ")
+	fmt.Println(string(body))
+
 	return string(body), nil
 }
 
-// TODO: implement the function without sample data
 func sendResultToParser(containerName, containerOutput string) types.ParserOutputJson {
 	var results []types.Result
-	err := json.Unmarshal([]byte(containerOutput), &results)
-	if err != nil {
+	if err := json.Unmarshal([]byte(containerOutput), &results); err != nil {
 		log.Println("Error unmarshalling container output:", err)
 		return types.ParserOutputJson{}
 	}
 
-	returnData := types.ParserOutputJson{
+	return types.ParserOutputJson{
 		ScannerName: containerName,
 		Results:     results,
 	}
-
-	return returnData
 }
 
 // runSubsequentScans runs scans if the initials scans have vulnerabilities that require subsequent scans
 // it runs the scans that are in the results map of the runner config
 // TODO: send parsed results to decody
 func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t string, cf types.ConfigFile) {
-	// get all the keys of results
 	var resultKeys []string
-	for key, _ := range rc.Results {
+	for key := range rc.Results {
 		key = strings.ToUpper(key)
 		resultKeys = append(resultKeys, key)
 	}
@@ -216,13 +205,11 @@ func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t st
 	for _, result := range pout.Results {
 		vulnerabilityPos := slices.Index(resultKeys, result.Short)
 
-		if vulnerabilityPos != -1 { // if there is a match of the result in the results
-			// get the scans that need to be run
+		if vulnerabilityPos != -1 {
 			scansToRun := rc.Results[resultKeys[vulnerabilityPos]]
 			for _, scan := range scansToRun {
 				runner := cf.Runners[scan]
-				_, err := runScanFromConfig(runner, t, cf, result.PassRes)
-				if err != nil {
+				if _, err := runScanFromConfig(runner, t, cf, result.PassRes); err != nil {
 					return
 				}
 			}
