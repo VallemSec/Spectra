@@ -27,8 +27,9 @@ type ParserOutputJson struct {
 }
 
 type Result struct {
-	Short string `json:"short"`
-	Long  string `json:"long"`
+	Short   string   `json:"short"`
+	Long    string   `json:"long"`
+	PassRes []string `json:"pass_results"`
 }
 
 type RunnerJSON struct {

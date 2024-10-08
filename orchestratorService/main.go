@@ -112,15 +112,16 @@ func runDockerService(runConf types.RunnerConfig) (string, error) {
 
 // TODO: implement the function without sample data
 func sendResultToParser(containerName, containerOutput string) types.ParserOutputJson {
-	// send the result to the parser
+	var results []types.Result
+	err := json.Unmarshal([]byte(containerOutput), &results)
+	if err != nil {
+		log.Println("Error unmarshalling container output:", err)
+		return types.ParserOutputJson{}
+	}
+
 	returnData := types.ParserOutputJson{
 		ScannerName: containerName,
-		Results: []types.Result{
-			{
-				Short: "HTTP",
-				Long:  "{\\\"80\\\": {\\\"name\\\": \\\"http\\\"}",
-			},
-		},
+		Results:     results,
 	}
 
 	return returnData
@@ -176,6 +177,19 @@ func runScanFromConfig(rf types.RunnerConfig, t string, cf types.ConfigFile) (st
 	if err != nil {
 		return "", err
 	}
+
+	sr = `[
+	  {
+		"short": "VULN-001",
+		"long": "Description of vulnerability 001",
+		"pass_results": "SinglePassResult"
+	  },
+	  {
+		"short": "HTTP",
+		"long": "{\\\"80\\\": {\\\"name\\\": \\\"http\\\"}",
+		"pass_results": ["PassResult1", "PassResult2"]
+	  }
+	]`
 
 	pr := sendResultToParser(rf.ContainerName, sr)
 
