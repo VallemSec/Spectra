@@ -56,19 +56,48 @@ func main() {
 			log.Fatalf("Failed to unmarshall the config, this is typically due to a malformed config Unmarshalling error: %v", err)
 		}
 
+		var wg sync.WaitGroup
+
+		// Run DiscoveryRunners concurrently
 		for _, runnerName := range config.DiscoveryRunners {
-			runner := config.Runners[runnerName]
+			wg.Add(1)
+			go func(runnerName string) {
+				defer wg.Done()
+				runner := config.Runners[runnerName]
 
-			fromConfig, err := runScanFromConfig(runner, jsonBody.Target, config, nil)
-			if err != nil {
-				log.Println(err)
-				w.WriteHeader(http.StatusInternalServerError)
-				json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-				return
-			}
+				fromConfig, err := runScanFromConfig(runner, jsonBody.Target, config, nil)
+				if err != nil {
+					log.Println(err)
+					w.WriteHeader(http.StatusInternalServerError)
+					json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+					return
+				}
 
-			log.Println(fromConfig)
+				log.Println(fromConfig)
+			}(runnerName)
 		}
+
+		// Run AlwaysRun concurrently
+		for _, runnerName := range config.AlwaysRun {
+			wg.Add(1)
+			go func(runnerName string) {
+				defer wg.Done()
+				runner := config.Runners[runnerName]
+
+				fromConfig, err := runScanFromConfig(runner, jsonBody.Target, config, nil)
+				if err != nil {
+					log.Println(err)
+					w.WriteHeader(http.StatusInternalServerError)
+					json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+					return
+				}
+
+				log.Println(fromConfig)
+			}(runnerName)
+		}
+
+		// Wait for all scans to complete
+		wg.Wait()
 	})
 
 	if err := http.ListenAndServe(":8080", nil); err != nil {
@@ -202,17 +231,25 @@ func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t st
 		return
 	}
 
+	var wg sync.WaitGroup
+
 	for _, result := range pout.Results {
 		vulnerabilityPos := slices.Index(resultKeys, result.Short)
 
 		if vulnerabilityPos != -1 {
 			scansToRun := rc.Results[resultKeys[vulnerabilityPos]]
 			for _, scan := range scansToRun {
-				runner := cf.Runners[scan]
-				if _, err := runScanFromConfig(runner, t, cf, result.PassRes); err != nil {
-					return
-				}
+				wg.Add(1)
+				go func(scan string) {
+					defer wg.Done()
+					runner := cf.Runners[scan]
+					if _, err := runScanFromConfig(runner, t, cf, result.PassRes); err != nil {
+						log.Println("Error running subsequent scan:", err)
+					}
+				}(scan)
 			}
 		}
 	}
+
+	wg.Wait()
 }
