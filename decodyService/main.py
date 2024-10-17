@@ -2,7 +2,6 @@ from flask import Flask, g
 import dotenv
 import logging
 import os
-import keydb
 import pymysql
 
 import endpoints
@@ -28,18 +27,6 @@ app.register_blueprint(endpoints.generate_app)
 
 @app.before_request
 def open_db():
-    if "keydb_conn" not in g:
-        keydb_conn = keydb.KeyDB(
-            host=os.getenv("KEYDB_HOST", "localhost"),
-            port=int(os.getenv("KEYDB_PORT", "6379"))
-        )
-        try:
-            keydb_conn.ping()
-        except keydb.ConnectionError:
-            db_logger.debug("Failed to open connection to keydb")
-            return "Internal server error", 500
-        g.keydb_conn = keydb_conn
-        db_logger.debug("Opened connection to keydb")
     if "mariadb_conn" not in g:
         try:
             mariadb_conn = pymysql.Connect(
@@ -59,13 +46,7 @@ def open_db():
 
 @app.teardown_appcontext
 def close_db(exception):
-    keydb_conn = g.pop("keydb_conn", None)
     mariadb_conn = g.pop("mariadb_conn", None)
-    if keydb_conn is not None:
-        keydb_conn.close()
-        db_logger.debug("Closed connection to keydb")
-    else:
-        db_logger.debug("No connection to keydb found, nothing to close")
     if mariadb_conn is not None:
         mariadb_conn.close()
         db_logger.debug("Closed connection to maria db")

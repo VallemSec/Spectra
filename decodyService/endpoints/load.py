@@ -1,6 +1,5 @@
 from flask import Blueprint, g, request
 import pymysql
-import keydb
 import jsonschema
 import logging
 import json
@@ -35,9 +34,10 @@ def load_endpoint(request_id: str) -> tuple[str, int]:
         logger.debug("Validation failed, body not properly formatted")
         return "Body not properly formatted", 400
 
-    # Insert request body into KeyDB
-    g.keydb_conn: keydb.KeyDB
-    g.keydb_conn.set(f"{request_id}-input", json.dumps(request_body))
+    # Insert request body into table
+    with g.mariadb_conn.cursor() as cursor:
+        cursor.execute("INSERT INTO key_value (key, value) VALUES (%s, %s)",
+                       (f"{request_id}-input", json.dumps(request_body)))
 
     # Fetch all rulesets from the database based on the input
     g.mariadb_conn: pymysql.Connection
@@ -51,9 +51,12 @@ def load_endpoint(request_id: str) -> tuple[str, int]:
             rules += cursor.fetchall()
 
     # Parse all the rules and add the applicable explanations to keydb
-    keydb_value: str = g.keydb_conn.get(f"{request_id}-explanations")
-    explanations = set(json.loads(keydb_value)) \
-        if keydb_value is not None else set()
+    with g.mariadb_conn.cursor() as cursor:
+        cursor.execute("SELECT value FROM key_value WHERE key = %s",
+                       (f"{request_id}-explanations",))
+        value = cursor.fetchone()[0]
+    explanations = set(json.loads(value)) \
+        if value is not None else set()
     for result in request_body.get("results"):
         for rule in rules:
             if safe_eval(rule["condition"],
@@ -62,8 +65,7 @@ def load_endpoint(request_id: str) -> tuple[str, int]:
                          }
                          ):
                 explanations.add(rule["explanation"])
-    g.keydb_conn.set(
-        f"{request_id}-explanations",
-        json.dumps(list(explanations))
-    )
+    with g.mariadb_conn.cursor() as cursor:
+        cursor.execute("INSERT INTO key_value (key, value) VALUES (%s, %s)",
+                       (f"{request_id}-explanations", json.dumps(explanations)))
     return "", 201
