@@ -1,11 +1,10 @@
-from flask import Blueprint, g, request
-import pymysql
+from flask import Blueprint, request
 import jsonschema
 import logging
 import json
 import os
 
-from helpers.eval import safe_eval
+from helpers import safe_eval, AI, Database
 
 
 load_app = Blueprint("load_app", __name__)
@@ -33,39 +32,34 @@ def load_endpoint(request_id: str) -> tuple[str, int]:
     except jsonschema.ValidationError:
         logger.debug("Validation failed, body not properly formatted")
         return "Body not properly formatted", 400
+    Database.KeyStorage.set(f"{request_id}-input", json.dumps(request_body))
 
-    # Insert request body into table
-    with g.mariadb_conn.cursor() as cursor:
-        cursor.execute("INSERT INTO key_value (key, value) VALUES (%s, %s)",
-                       (f"{request_id}-input", json.dumps(request_body)))
+    ai = AI()
 
     # Fetch all rulesets from the database based on the input
-    g.mariadb_conn: pymysql.Connection
-    with g.mariadb_conn.cursor() as cursor:
-        rules = []
-        for rule in request_body.get("rules"):
-            cursor.execute("""
-                select r.condition, r.explanation from rules r, files f
-                where f.file_name = %s and r.file_id = f.file_id;
-            """, (rule,))
-            rules += cursor.fetchall()
+    rules = []
+    for rule_file in request_body.get("rules"):
+        rules += Database.fetch_rules(rule_file)
 
-    # Parse all the rules and add the applicable explanations to keydb
-    with g.mariadb_conn.cursor() as cursor:
-        cursor.execute("SELECT value FROM key_value WHERE key = %s",
-                       (f"{request_id}-explanations",))
-        value = cursor.fetchone()[0]
-    explanations = set(json.loads(value)) \
-        if value is not None else set()
+    value = Database.KeyStorage.get(f"{request_id}-results")
+    results = json.loads(value) if value else list()
     for result in request_body.get("results"):
+        result_body = dict()
         for rule in rules:
-            if safe_eval(rule["condition"],
-                         {
-                             "err_short": result["err_short"]
-                         }
-                         ):
-                explanations.add(rule["explanation"])
-    with g.mariadb_conn.cursor() as cursor:
-        cursor.execute("INSERT INTO key_value (key, value) VALUES (%s, %s)",
-                       (f"{request_id}-explanations", json.dumps(explanations)))
+            if not safe_eval(
+                    rule["condition"],
+                     {
+                         "err_short": result["err_short"]
+                     }):
+                continue
+
+            result_body["category"] = rule["category"]
+            result_body["description"] = rule["explanation"]
+            result_body["name"] = rule["name"]
+            result_body["ai_advice"] = ai.generate_ai_advice(
+                rule["explanation"])
+        results.append(result_body)
+
+    Database.KeyStorage.set(f"{request_id}-results",
+                            json.dumps(list(filter(None, results))))
     return "", 201
