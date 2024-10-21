@@ -21,7 +21,8 @@ class Database:
         conn: pymysql.Connection = g.mariadb_conn
         with conn.cursor() as cursor:
             cursor.execute("""
-            SELECT r.* FROM rules r, files f
+            SELECT r.id, r.category, r.explanation, r.`condition`, r.name 
+            FROM rules r, files f
             WHERE f.file_name = %s AND r.file_id = f.id;
             """, (rule_file_name,))
             results = cursor.fetchall()
