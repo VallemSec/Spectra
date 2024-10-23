@@ -71,7 +71,7 @@ class Database:
             return affected_rows
 
         @staticmethod
-        def get(key: str, connection: pymysql.Connection = None) -> str:
+        def get(key: str, connection: pymysql.Connection = None) -> str | None:
             conn: pymysql.Connection = connection or g.mariadb_conn
             with conn.cursor() as cursor:
                 cursor.execute("""
@@ -79,4 +79,4 @@ class Database:
                 WHERE `key` = %s;
                 """, (key,))
                 result = cursor.fetchone()
-                return result["value"] if result else ""
+                return result["value"] if result else None
