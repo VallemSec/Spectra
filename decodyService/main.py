@@ -4,6 +4,8 @@ import logging
 import os
 import pymysql
 
+from helpers import Database
+
 import endpoints
 
 dotenv.load_dotenv()
@@ -29,14 +31,7 @@ app.register_blueprint(endpoints.generate_app)
 def open_db():
     if "mariadb_conn" not in g:
         try:
-            mariadb_conn = pymysql.Connect(
-                host=os.getenv("MARIADB_HOST", "localhost"),
-                port=int(os.getenv("MARIADB_PORT", "3306")),
-                user=os.getenv("MARIADB_USER", "root"),
-                password=os.getenv("MARIADB_PASSWORD", "password"),
-                database=os.getenv("MARIADB_DATABASE", "decody_devdb"),
-                cursorclass=pymysql.cursors.DictCursor
-            )
+            mariadb_conn = Database.db_connect()
         except pymysql.err.OperationalError:
             db_logger.debug("Failed to open connection to maria db")
             return "Internal server error", 500
