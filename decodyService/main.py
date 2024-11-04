@@ -14,7 +14,7 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", handlers=[
         logging.StreamHandler(),
         logging.FileHandler(
-            os.getenv("LOG_FILE", "decody.log"), encoding="utf-8"
+            os.getenv("LOGFILE", "decody.log"), encoding="utf-8"
         )
     ],
     level=os.getenv("LOGLEVEL", "INFO").upper()

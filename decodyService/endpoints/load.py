@@ -30,7 +30,7 @@ def load_endpoint(request_id: str) -> tuple[str, int]:
     try:
         jsonschema.validate(instance=request_body, schema=schema)
     except jsonschema.ValidationError:
-        logger.debug("Validation failed, body not properly formatted")
+        logger.error("Validation failed, body not properly formatted")
         return "Body not properly formatted", 400
     Database.KeyStorage.set(f"{request_id}-input", json.dumps(request_body))
 
