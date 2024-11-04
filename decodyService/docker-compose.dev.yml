@@ -1,0 +1,9 @@
+services:
+  mariadb:
+    image: mariadb:lts-ubi9
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: password
+      MARIADB_DATABASE: decody_devdb
+    ports:
+      - 3306:3306
