@@ -1,10 +1,8 @@
-import os
 import unittest
 from unittest import mock
 import json
 
 class TestGenerateEndpoint(unittest.TestCase):
-    @mock.patch.dict(os.environ, {"INPUTSCHEMA": "../../jsonSchemas/decody-input.schema.json"})
     def test_valid_request_id_returns_correct_advice_and_results(self):
         """
         Test the endpoint for a valid request ID to ensure correct advice and results are returned.
@@ -27,7 +25,6 @@ class TestGenerateEndpoint(unittest.TestCase):
                 self.assertEqual(data["advice"], expected_advice)
                 self.assertEqual(data["results"], json.loads(mock_results))
 
-    @mock.patch.dict(os.environ, {"INPUTSCHEMA": "../../jsonSchemas/decody-input.schema.json"})
     def test_request_id_does_not_exist_in_database(self):
         """
         Test the behavior of the endpoint when a request ID that does not exist in the database is provided.

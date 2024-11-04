@@ -1,10 +1,7 @@
-import os
-
 import unittest
 from unittest import mock
 
 class TestLoadEndpoint(unittest.TestCase):
-    @mock.patch.dict(os.environ, {"INPUTSCHEMA": "../../jsonSchemas/decody-input.schema.json"})
     def test_valid_json_body_processed_correctly(self):
         """
         Test the processing of a valid JSON body by the endpoint.
@@ -34,7 +31,6 @@ class TestLoadEndpoint(unittest.TestCase):
             mock_set.assert_any_call(f"{request_id}-input", mock.ANY)
             mock_set.assert_any_call(f"{request_id}-results", mock.ANY)
 
-    @mock.patch.dict(os.environ, {"INPUTSCHEMA": "../../jsonSchemas/decody-input.schema.json"})
     def test_request_body_not_json_returns_400(self):
         """
         Test the behavior when the request body is not in JSON format.
@@ -50,7 +46,6 @@ class TestLoadEndpoint(unittest.TestCase):
             self.assertEqual(response.data, b"Body not JSON")
             self.assertEqual(response.status_code, 400)
 
-    @mock.patch.dict(os.environ, {"INPUTSCHEMA": "../../jsonSchemas/decody-input.schema.json"})
     def test_request_body_invalid_json_returns_400(self):
         """
         Test the behavior when the request body is an empty JSON object.
