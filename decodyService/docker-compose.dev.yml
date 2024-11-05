@@ -7,3 +7,14 @@ services:
       MARIADB_DATABASE: decody_devdb
     ports:
       - 3306:3306
+
+  decody:
+    build:
+      context: .
+    restart: unless-stopped
+    environment:
+      MARIADB_HOST: mariadb
+    volumes:
+      - ../jsonSchemas:/schemas
+    ports:
+      - "5001:5001"
