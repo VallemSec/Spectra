@@ -27,7 +27,9 @@ class Database:
         )
 
     @staticmethod
-    def fetch_rules(rule_file_name: str, connection: pymysql.Connection = None) -> list[DecodyDatabaseRuleFormat]:
+    def fetch_rules(rule_file_name: str,
+                    connection: pymysql.Connection = None
+                    ) -> list[DecodyDatabaseRuleFormat]:
         output = list()
         conn: pymysql.Connection = connection or g.mariadb_conn
         with conn.cursor() as cursor:
@@ -54,7 +56,8 @@ class Database:
         interacting with the key-value storage in the Database.
         """
         @staticmethod
-        def set(key: str, value: str, connection: pymysql.Connection = None) -> int:
+        def set(key: str, value: str,
+                connection: pymysql.Connection = None) -> int:
             conn: pymysql.Connection = connection or g.mariadb_conn
             with conn.cursor() as cursor:
                 affected_rows = cursor.execute("""
