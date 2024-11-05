@@ -8,4 +8,4 @@ RUN pip install --no-cache-dir -r requirements.txt && apk add nmap
 
 COPY . .
 
-CMD [ "python", "./main.py" ]
+ENTRYPOINT [ "python", "./main.py" ]
