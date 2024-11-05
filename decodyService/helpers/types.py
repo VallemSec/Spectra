@@ -16,3 +16,13 @@ class DecodyDatabaseRuleFormat(TypedDict):
     explanation: str
     condition: str
     name: str
+
+class DecodyOutputResultFormat(TypedDict):
+    category: str
+    name: str
+    description: str
+    ai_advice: str
+
+class DecodyOutputFormat(TypedDict):
+    advice: str
+    results: list[DecodyOutputResultFormat]

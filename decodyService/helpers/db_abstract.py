@@ -75,3 +75,13 @@ class Database:
                 """, (key,))
                 result = cursor.fetchone()
                 return result["value"] if result else None
+
+        @staticmethod
+        def delete(key: str, connection: pymysql.Connection = None) -> int:
+            conn: pymysql.Connection = connection or g.mariadb_conn
+            with conn.cursor() as cursor:
+                affected_rows = cursor.execute("""
+                DELETE FROM `key_value` WHERE `key` = %s;
+                """, (key,))
+            conn.commit()
+            return affected_rows
