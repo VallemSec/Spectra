@@ -1,15 +1,10 @@
-from typing import TypedDict
 from flask import g
 
 import pymysql
 import os
 
-class RuleFormat(TypedDict):
-    id: int
-    category: str
-    explanation: str
-    condition: str
-    name: str
+from helpers.types import DecodyDatabaseRuleFormat
+
 
 class Database:
     """
@@ -32,7 +27,7 @@ class Database:
         )
 
     @staticmethod
-    def fetch_rules(rule_file_name: str, connection: pymysql.Connection = None) -> list[RuleFormat]:
+    def fetch_rules(rule_file_name: str, connection: pymysql.Connection = None) -> list[DecodyDatabaseRuleFormat]:
         output = list()
         conn: pymysql.Connection = connection or g.mariadb_conn
         with conn.cursor() as cursor:
@@ -44,7 +39,7 @@ class Database:
             results = cursor.fetchall()
             for result in results:
                 output.append(
-                    RuleFormat(
+                    DecodyDatabaseRuleFormat(
                         id = result["id"],
                         category = result["category"],
                         explanation = result["explanation"],
