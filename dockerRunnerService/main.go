@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
@@ -23,6 +24,8 @@ func main() {
 			ContainerName    string   `json:"containerName"`
 			ContainerTag     string   `json:"containerTag"`
 			ContainerCommand []string `json:"containerCommand"`
+			Volume           []string `json:"volume"`
+			Env              []string `json:"env"`
 		}
 
 		// decode the request body into reqBody
@@ -41,8 +44,10 @@ func main() {
 		containerName := reqBody.ContainerName
 		containerTag := reqBody.ContainerTag
 		containerCommand := reqBody.ContainerCommand
+		volumes := reqBody.Volume
+		env := reqBody.Env
 
-		out, err := CreateContainer(containerName, containerTag, containerCommand)
+		out, err := CreateContainer(containerName, containerTag, containerCommand, volumes, env)
 		// log the error if there is any
 		if err != nil {
 			log.Println(err)
@@ -68,7 +73,9 @@ func main() {
 	}
 }
 
-func CreateContainer(containerName string, containerTag string, containerCommand []string) (string, error) {
+func CreateContainer(containerName, containerTag string, containerCommand, volumes, env []string) (string, error) {
+	fmt.Println("Creating container", containerName+":"+containerTag)
+
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -76,22 +83,33 @@ func CreateContainer(containerName string, containerTag string, containerCommand
 	}
 	defer cli.Close()
 
-	imageFound, err := docker.CheckLocalImg(ctx, cli, containerName+":"+containerTag)
+	imageName := containerName + ":" + containerTag
+	imageFound, err := docker.CheckLocalImg(ctx, cli, imageName)
 	if err != nil {
 		return "", err
 	}
 
+	fmt.Println("Image found: ", imageFound, imageName)
+
 	// Pull the image from docker.io if it's not found locally
 	if !imageFound {
-		reader, err := cli.ImagePull(ctx, "docker.io/"+containerName+":"+containerTag, image.PullOptions{})
+		fmt.Println("Pulling image", imageName)
+		reader, err := cli.ImagePull(ctx, "docker.io/"+imageName, image.PullOptions{})
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("failed to pull image: %w", err)
 		}
 		defer reader.Close()
 		io.Copy(os.Stdout, reader)
 	}
 
-	out, containerId, err := docker.StartAndReadLogs(ctx, cli, containerName, containerCommand)
+	out, containerId, err := docker.StartAndReadLogs(ctx, cli, imageName, containerCommand, volumes, env)
+	if err != nil {
+		return "", err
+	}
+
+	if out == nil {
+		return "", fmt.Errorf("failed to get logs from container")
+	}
 
 	var output string
 	scanner := bufio.NewScanner(out)

@@ -27,12 +27,17 @@ func CheckLocalImg(ctx context.Context, c *client.Client, iN string) (bool, erro
 	return false, nil
 }
 
-func StartAndReadLogs(ctx context.Context, c *client.Client, containerName string, containerCommand []string) (*bytes.Buffer, string, error) {
+func StartAndReadLogs(ctx context.Context, c *client.Client, containerName string, containerCommand, volumes, envVars []string) (*bytes.Buffer, string, error) {
+	hostConfig := &container.HostConfig{
+		Binds: volumes,
+	}
+
 	resp, err := c.ContainerCreate(ctx, &container.Config{
 		Image: containerName,
 		Cmd:   containerCommand,
 		Tty:   false,
-	}, nil, nil, nil, "")
+		Env:   envVars,
+	}, hostConfig, nil, nil, "")
 	if err != nil {
 		return nil, "", err
 	}

@@ -73,7 +73,7 @@ func main() {
 					return
 				}
 
-				log.Println(fromConfig)
+				fmt.Println("runFromConfig: ", fromConfig)
 			}(runnerName)
 		}
 
@@ -92,7 +92,7 @@ func main() {
 					return
 				}
 
-				log.Println(fromConfig)
+				fmt.Println("runFromConfig: ", fromConfig)
 			}(runnerName)
 		}
 
@@ -150,12 +150,12 @@ func runScanFromConfig(rf types.RunnerConfig, t string, cf types.ConfigFile, res
 
 	fmt.Println("Running scan: ", rf.ContainerName)
 	fmt.Println("Args: ", rf.CmdArgs)
-	sr, err := runDockerService(rf)
+	sr, err := runDockerService(rf, []string{}, []string{})
 	if err != nil {
 		return "", err
 	}
 
-	sr = `[
+	/*inssr = `[
 		{
 			"short": "VULN-001",
 			"long": "Description of vulnerability 001",
@@ -166,9 +166,9 @@ func runScanFromConfig(rf types.RunnerConfig, t string, cf types.ConfigFile, res
 			"long": "{\\\"80\\\": {\\\"name\\\": \\\"http\\\"}",
 			"pass_results": ["PassResult1", "PassResult2"]
 		}
-	]`
+	]`*/
 
-	pr := sendResultToParser(rf.ContainerName, sr)
+	pr := sendResultToParser(rf, sr)
 
 	runSubsequentScans(pr, rf, t, cf)
 
@@ -176,11 +176,14 @@ func runScanFromConfig(rf types.RunnerConfig, t string, cf types.ConfigFile, res
 }
 
 // this function kicks off a docker container with the given configuration and returns the output of the container
-func runDockerService(runConf types.RunnerConfig) (string, error) {
+func runDockerService(runConf types.RunnerConfig, volumes, env []string) (string, error) {
+	fmt.Println("Running docker service: ", runConf.Image, ":", runConf.ImageVersion, " with args: ", runConf.CmdArgs)
 	configJSON := types.RunnerJSON{
 		ContainerName:    runConf.Image,
 		ContainerTag:     runConf.ImageVersion,
 		ContainerCommand: runConf.CmdArgs,
+		Volumes:          volumes,
+		Env:              env,
 	}
 
 	jsonValue, err := json.Marshal(configJSON)
@@ -198,21 +201,64 @@ func runDockerService(runConf types.RunnerConfig) (string, error) {
 		return "", err
 	}
 
-	fmt.Println("Response body: ")
-	fmt.Println(string(body))
+	// remove the last key from the body if it is a newline or empty
+	if len(body) > 0 && (body[len(body)-1] == '\n' || body[len(body)-1] == ' ') {
+		body = body[:len(body)-1]
+	}
 
 	return string(body), nil
 }
 
-func sendResultToParser(containerName, containerOutput string) types.ParserOutputJson {
-	var results []types.Result
-	if err := json.Unmarshal([]byte(containerOutput), &results); err != nil {
+func sendResultToParser(runConf types.RunnerConfig, containerOutput string) types.ParserOutputJson {
+	type ContainerOutput struct {
+		Output []string `json:"output"`
+	}
+
+	fmt.Println("Running parser: ", runConf.ParserPlugin)
+	fmt.Println("Input: ", containerOutput)
+
+	// Clean the output of the container
+	containerOutput = utils.CleanControlCharacters(containerOutput)
+
+	serviceOut, err := runDockerService(types.RunnerConfig{
+		Image:        "nekoluka/spectra-scanner",
+		ImageVersion: "1.0.1",
+		CmdArgs:      []string{"test", runConf.ParserPlugin, containerOutput},
+	}, []string{"C:\\Users\\Fay\\Documents\\GitHub\\SpectraConfig\\parsers:/parsers"}, []string{"PARSER_FOLDER=/parsers"})
+	if err != nil {
+		return types.ParserOutputJson{}
+	}
+
+	var containerOutputStruct ContainerOutput
+	if err := json.Unmarshal([]byte(serviceOut), &containerOutputStruct); err != nil {
 		log.Println("Error unmarshalling container output:", err)
 		return types.ParserOutputJson{}
 	}
 
+	fmt.Println("Container output: ", containerOutputStruct)
+
+	var results []types.Result
+	for _, output := range containerOutputStruct.Output {
+		// Clean control characters from each output string
+		cleanedOutput := utils.CleanControlCharacters(output)
+		cleanedOutput = utils.CleanJSON(cleanedOutput)
+		if cleanedOutput == "" {
+			log.Println("Skipping invalid JSON output:", output)
+			continue
+		}
+
+		var result types.Result
+		if err := json.Unmarshal([]byte(cleanedOutput), &result); err != nil {
+			log.Println("Error unmarshalling individual result:", err)
+			continue
+		}
+		results = append(results, result)
+	}
+
+	fmt.Println("Results: ", results)
+
 	return types.ParserOutputJson{
-		ScannerName: containerName,
+		ScannerName: runConf.ContainerName,
 		Results:     results,
 	}
 }

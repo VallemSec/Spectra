@@ -72,4 +72,6 @@ type RunnerJSON struct {
 	ContainerName    string   `json:"containerName"`
 	ContainerTag     string   `json:"containerTag"`
 	ContainerCommand []string `json:"containerCommand"`
+	Volumes          []string `json:"volume"`
+	Env              []string `json:"env"`
 }

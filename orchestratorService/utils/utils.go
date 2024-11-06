@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"sync"
 )
@@ -118,4 +119,20 @@ func SubsequentOccurrences(s string, slice []string) int {
 		}
 	}
 	return maxCount
+}
+
+func CleanJSON(input string) string {
+	// Find the first '{' character which indicates the start of the JSON object
+	index := strings.Index(input, "{")
+	if index != -1 {
+		return input[index:]
+	}
+	return ""
+}
+
+func CleanControlCharacters(input string) string {
+	// Define a regular expression to match control characters, including Unicode control characters
+	re := regexp.MustCompile(`\\u0001|\\u0000o|\\u0000`)
+	// Replace all control characters with an empty string
+	return re.ReplaceAllString(input, "")
 }
