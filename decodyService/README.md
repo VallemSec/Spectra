@@ -7,3 +7,5 @@ creates a rapport that is understandable for people with little technical knowle
 - Collect results from scans
 - Put results together in a rapport
 - if no results are found, ask chatGPT to generate a description of the vulnerability
+
+`docker build -t decody .`
