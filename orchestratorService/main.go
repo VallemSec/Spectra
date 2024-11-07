@@ -33,15 +33,14 @@ func main() {
 	}
 
 	configFileName := os.Getenv("CONFIG_FILE_PATH")
+	yamlFile, err := os.ReadFile(configFileName)
+	if err != nil {
+		log.Fatalf("Could not read config.yaml read error: %v", err)
+	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		var jsonBody types.JSONbody
 		var config types.ConfigFile
-
-		yamlFile, err := os.ReadFile(configFileName)
-		if err != nil {
-			log.Fatalf("Could not read config.yaml read error: %v", err)
-		}
 
 		err = json.NewDecoder(r.Body).Decode(&jsonBody)
 		jsonBody.Target, err = utils.NormalizeTarget(jsonBody.Target)
