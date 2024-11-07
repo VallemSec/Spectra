@@ -40,8 +40,9 @@ jobs:
       - name: "Build Decody docker image"
         shell: bash
         run: |
-          docker build -t ${{ env.IMAGE_NAME }}/decody:${{ env.RELEASE_VERSION }} \
-          -t ${{ env.IMAGE_NAME }}/decody:latest \
+          docker build \
+          -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/decody:${{ env.RELEASE_VERSION }} \
+          -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/decody:latest \
           --platform linux/amd64 \
           --push \
           decodyService/
