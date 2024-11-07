@@ -22,7 +22,7 @@ jobs:
     steps:
       - name: "Checkout branch"
         uses: actions/checkout@v4
-      - name: Get the release version
+      - name: Get the image name and release version
         shell: bash
         run: |
           image_name=$(python3 -c "print('${{ env.REPO_NAME }}'.split('/', 1)[1].lower())")
@@ -32,7 +32,7 @@ jobs:
           echo "Building release version $release_version"
           echo "RELEASE_VERSION=$release_version" >> $GITHUB_ENV
       - name: Log in to the Container registry
-        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -42,6 +42,6 @@ jobs:
         run: |
           docker build -t ${{ env.IMAGE_NAME }}/decody:${{ env.RELEASE_VERSION }} \
           -t ${{ env.IMAGE_NAME }}/decody:latest \
-          --platform linux/amd64,linux/arm64 \
+          --platform linux/amd64 \
           --push \
           decodyService/
