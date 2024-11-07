@@ -121,18 +121,26 @@ func SubsequentOccurrences(s string, slice []string) int {
 	return maxCount
 }
 
-func CleanJSON(input string) string {
-	// Find the first '{' character which indicates the start of the JSON object
-	index := strings.Index(input, "{")
-	if index != -1 {
-		return input[index:]
-	}
-	return ""
+func CleanParserOutput(input string) string {
+	input = CleanControlCharacters(input)
+	input = removeEscapeChars(input)
+
+	input = strings.ReplaceAll(input, `,""`, ``)
+	input = input[2 : len(input)-3]
+
+	return input
 }
 
 func CleanControlCharacters(input string) string {
 	// Define a regular expression to match control characters, including Unicode control characters
-	re := regexp.MustCompile(`\\u0001|\\u0000o|\\u0000`)
+	re := regexp.MustCompile(`\\u0001|\\u0000o|\\u0000|\\ufffd`)
 	// Replace all control characters with an empty string
+	return re.ReplaceAllString(input, "")
+}
+
+func removeEscapeChars(input string) string {
+	// Define a regular expression to match escape characters
+	re := regexp.MustCompile(`\\`)
+	// Replace all escape characters with an empty string
 	return re.ReplaceAllString(input, "")
 }

@@ -21,8 +21,8 @@ runners:
             FTP:
                 - ftpscan
             # if we find port 80 open, we will run nuclei which will in turn run SSLyze if it finds any SSL issues
-            HTTP:
-                - NUCLEI
+            #80:
+            #    - NUCLEI
             #if we find port 22 open, we will run SSHscan
             SSH:
                 - SSHscan

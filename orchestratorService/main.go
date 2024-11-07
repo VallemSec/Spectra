@@ -155,19 +155,6 @@ func runScanFromConfig(rf types.RunnerConfig, t string, cf types.ConfigFile, res
 		return "", err
 	}
 
-	/*inssr = `[
-		{
-			"short": "VULN-001",
-			"long": "Description of vulnerability 001",
-			"pass_results": "SinglePassResult"
-		},
-		{
-			"short": "HTTP",
-			"long": "{\\\"80\\\": {\\\"name\\\": \\\"http\\\"}",
-			"pass_results": ["PassResult1", "PassResult2"]
-		}
-	]`*/
-
 	pr := sendResultToParser(rf, sr)
 
 	runSubsequentScans(pr, rf, t, cf)
@@ -201,21 +188,11 @@ func runDockerService(runConf types.RunnerConfig, volumes, env []string) (string
 		return "", err
 	}
 
-	// remove the last key from the body if it is a newline or empty
-	if len(body) > 0 && (body[len(body)-1] == '\n' || body[len(body)-1] == ' ') {
-		body = body[:len(body)-1]
-	}
-
 	return string(body), nil
 }
 
 func sendResultToParser(runConf types.RunnerConfig, containerOutput string) types.ParserOutputJson {
-	type ContainerOutput struct {
-		Output []string `json:"output"`
-	}
-
-	fmt.Println("Running parser: ", runConf.ParserPlugin)
-	fmt.Println("Input: ", containerOutput)
+	fmt.Println(containerOutput)
 
 	// Clean the output of the container
 	containerOutput = utils.CleanControlCharacters(containerOutput)
@@ -223,43 +200,29 @@ func sendResultToParser(runConf types.RunnerConfig, containerOutput string) type
 	serviceOut, err := runDockerService(types.RunnerConfig{
 		Image:        "nekoluka/spectra-scanner",
 		ImageVersion: "1.0.1",
-		CmdArgs:      []string{"test", runConf.ParserPlugin, containerOutput},
-	}, []string{"C:\\Users\\Fay\\Documents\\GitHub\\SpectraConfig\\parsers:/parsers"}, []string{"PARSER_FOLDER=/parsers"})
+		CmdArgs:      []string{runConf.ContainerName, runConf.ParserPlugin, containerOutput},
+	}, []string{os.Getenv("PARSERS_FOLDER") + ":/parsers"}, []string{"PARSER_FOLDER=/parsers"})
 	if err != nil {
 		return types.ParserOutputJson{}
 	}
 
-	var containerOutputStruct ContainerOutput
-	if err := json.Unmarshal([]byte(serviceOut), &containerOutputStruct); err != nil {
-		log.Println("Error unmarshalling container output:", err)
+	fmt.Println(serviceOut)
+
+	serviceOut = utils.CleanParserOutput(serviceOut)
+
+	fmt.Println(serviceOut)
+
+	// parse the output of the parser
+	var pout types.ParserOutputJson
+	if err := json.Unmarshal([]byte(serviceOut), &pout); err != nil {
+		log.Println("Error unmarshalling parser output:", err)
+		log.Println("Parser output:", serviceOut)
 		return types.ParserOutputJson{}
 	}
 
-	fmt.Println("Container output: ", containerOutputStruct)
-
-	var results []types.Result
-	for _, output := range containerOutputStruct.Output {
-		// Clean control characters from each output string
-		cleanedOutput := utils.CleanControlCharacters(output)
-		cleanedOutput = utils.CleanJSON(cleanedOutput)
-		if cleanedOutput == "" {
-			log.Println("Skipping invalid JSON output:", output)
-			continue
-		}
-
-		var result types.Result
-		if err := json.Unmarshal([]byte(cleanedOutput), &result); err != nil {
-			log.Println("Error unmarshalling individual result:", err)
-			continue
-		}
-		results = append(results, result)
-	}
-
-	fmt.Println("Results: ", results)
-
 	return types.ParserOutputJson{
 		ScannerName: runConf.ContainerName,
-		Results:     results,
+		Results:     pout.Results,
 	}
 }
 
@@ -289,7 +252,7 @@ func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t st
 				go func(scan string) {
 					defer wg.Done()
 					runner := cf.Runners[scan]
-					if _, err := runScanFromConfig(runner, t, cf, result.PassRes); err != nil {
+					if _, err := runScanFromConfig(runner, t, cf /*result.PassRes*/, []string{}); err != nil {
 						log.Println("Error running subsequent scan:", err)
 					}
 				}(scan)

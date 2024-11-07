@@ -64,7 +64,7 @@ func main() {
 
 		// return the output of the container as the response in JSON format
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string][]string{"output": lines})
+		json.NewEncoder(w).Encode(lines)
 	})
 
 	err := http.ListenAndServe(":8080", nil)

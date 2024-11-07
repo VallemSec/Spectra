@@ -27,16 +27,17 @@ type RunnerConfig struct {
 }
 
 type ParserOutputJson struct {
-	ScannerName string   `json:"scanner_name"`
+	ScannerName string   `json:"name"`
 	Results     []Result `json:"results"`
 }
 
 type Result struct {
 	Short   string   `json:"short"`
 	Long    string   `json:"long"`
-	PassRes []string `json:"pass_results"`
+	PassRes []string `json:"pass_results,omitempty"`
 }
 
+// UnmarshalJSON custom unmarshaller for Result
 func (r *Result) UnmarshalJSON(data []byte) error {
 	type Alias Result
 	aux := &struct {
@@ -61,6 +62,8 @@ func (r *Result) UnmarshalJSON(data []byte) error {
 				return fmt.Errorf("unexpected type for pass_results field")
 			}
 		}
+	case nil:
+		r.PassRes = []string{}
 	default:
 		return fmt.Errorf("unexpected type for pass_results field")
 	}
