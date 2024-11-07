@@ -25,7 +25,7 @@ jobs:
       - name: Get the image name and release version
         shell: bash
         run: |
-          image_name=$(python3 -c "print('${{ env.REPO_NAME }}'.lower())")
+          image_name=$(python3 -c "print('${{ env.REPO_NAME }}'.split('/', 1)[1].lower())")
           echo "Image name = $image_name"
           echo "IMAGE_NAME=$image_name" >> $GITHUB_ENV
           release_version=$(python3 -c "print('${{ github.ref }}'.rsplit('/', 1)[1])")
@@ -37,19 +37,12 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      # - name: "Build Decody docker image"
-      #   shell: bash
-        # run: |
-        #   docker build \
-        #   -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:decody-${{ env.RELEASE_VERSION }} \
-        #   -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:decody-latest \
-        #   --platform linux/amd64 \
-        #   --push \
-        #   decodyService/
-      - name: Build and push Docker image
-        id: push
-        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
-        with:
-          context: ./decodyService
-          push: true
-          tags: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:decody-${{ env.RELEASE_VERSION }},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:decody-latest"
+      - name: "Build Decody docker image"
+        shell: bash
+        run: |
+          docker build \
+          -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/decody:${{ env.RELEASE_VERSION }} \
+          -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/decody:latest \
+          --platform linux/amd64 \
+          --push \
+          decodyService/
