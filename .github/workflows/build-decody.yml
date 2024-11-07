@@ -1,0 +1,47 @@
+name: "Build Decody docker image"
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "release/**"
+
+env:
+  REGISTRY: ghcr.io
+  REPO_NAME: ${{ github.repository }}
+        
+jobs:
+  build_decody_image:
+    name: "Build Decody docker image"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    steps:
+      - name: "Checkout branch"
+        uses: actions/checkout@v4
+      - name: Get the release version
+        shell: bash
+        run: |
+          image_name=$(python3 -c "print('${{ env.REPO_NAME }}'.split('/', 1)[1].lower())")
+          echo "Image name = $image_name"
+          echo "IMAGE_NAME=$image_name" >> $GITHUB_ENV
+          release_version=$(python3 -c "print('${{ github.ref }}'.rsplit('/', 1)[1])")
+          echo "Building release version $release_version"
+          echo "RELEASE_VERSION=$release_version" >> $GITHUB_ENV
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: "Build Decody docker image"
+        shell: bash
+        run: |
+          docker build -t ${{ env.IMAGE_NAME }}/decody:${{ env.RELEASE_VERSION }} \
+          -t ${{ env.IMAGE_NAME }}/decody:latest \
+          --platform linux/amd64,linux/arm64 \
+          --push \
+          decodyService/
