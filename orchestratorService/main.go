@@ -38,9 +38,13 @@ func main() {
 		log.Fatalf("Could not read config.yaml read error: %v", err)
 	}
 
+	var config types.ConfigFile
+	if err := yaml.Unmarshal(yamlFile, &config); err != nil {
+		log.Fatalf("Failed to unmarshall the config, this is typically due to a malformed config Unmarshalling error: %v", err)
+	}
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		var jsonBody types.JSONbody
-		var config types.ConfigFile
 
 		err = json.NewDecoder(r.Body).Decode(&jsonBody)
 		jsonBody.Target, err = utils.NormalizeTarget(jsonBody.Target)
@@ -49,10 +53,6 @@ func main() {
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
-		}
-
-		if err := yaml.Unmarshal(yamlFile, &config); err != nil {
-			log.Fatalf("Failed to unmarshall the config, this is typically due to a malformed config Unmarshalling error: %v", err)
 		}
 
 		var wg sync.WaitGroup
