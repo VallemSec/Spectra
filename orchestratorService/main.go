@@ -8,7 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"slices"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -192,8 +192,6 @@ func runDockerService(runConf types.RunnerConfig, volumes, env []string) (string
 }
 
 func sendResultToParser(runConf types.RunnerConfig, containerOutput string) types.ParserOutputJson {
-	fmt.Println(containerOutput)
-
 	// Clean the output of the container
 	containerOutput = utils.CleanControlCharacters(containerOutput)
 
@@ -206,11 +204,7 @@ func sendResultToParser(runConf types.RunnerConfig, containerOutput string) type
 		return types.ParserOutputJson{}
 	}
 
-	fmt.Println(serviceOut)
-
 	serviceOut = utils.CleanParserOutput(serviceOut)
-
-	fmt.Println(serviceOut)
 
 	// parse the output of the parser
 	var pout types.ParserOutputJson
@@ -230,6 +224,26 @@ func sendResultToParser(runConf types.RunnerConfig, containerOutput string) type
 // it runs the scans that are in the results map of the runner config
 // TODO: send parsed results to decody
 func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t string, cf types.ConfigFile) {
+	scansToRun := findScansToRun(pout, rc, cf)
+
+	if scansToRun == nil {
+		return
+	}
+
+	var wg sync.WaitGroup
+
+	for _, result := range scansToRun {
+		wg.Add(1)
+		go func(result types.RunnerConfig) {
+			defer wg.Done()
+			runScanFromConfig(result, t, cf, pout.Results[0].PassRes)
+		}(result)
+	}
+
+	wg.Wait()
+}
+
+func findScansToRun(pout types.ParserOutputJson, rc types.RunnerConfig, cf types.ConfigFile) []types.RunnerConfig {
 	var resultKeys []string
 	for key := range rc.Results {
 		key = strings.ToUpper(key)
@@ -237,28 +251,33 @@ func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t st
 	}
 
 	if resultKeys == nil {
-		return
+		return nil
 	}
 
-	var wg sync.WaitGroup
+	scansToRun := make([]types.RunnerConfig, 0)
+	seenScans := make(map[string]bool)
 
 	for _, result := range pout.Results {
-		vulnerabilityPos := slices.Index(resultKeys, result.Short)
-
-		if vulnerabilityPos != -1 {
-			scansToRun := rc.Results[resultKeys[vulnerabilityPos]]
-			for _, scan := range scansToRun {
-				wg.Add(1)
-				go func(scan string) {
-					defer wg.Done()
-					runner := cf.Runners[scan]
-					if _, err := runScanFromConfig(runner, t, cf /*result.PassRes*/, []string{}); err != nil {
-						log.Println("Error running subsequent scan:", err)
+		for _, key := range resultKeys {
+			if strings.Contains(key, "?") {
+				if match, _ := regexp.MatchString(strings.ReplaceAll(key, "?", ".*"), result.Short); match {
+					for _, scan := range rc.Results[key] {
+						if !seenScans[scan] {
+							scansToRun = append(scansToRun, cf.Runners[scan])
+							seenScans[scan] = true
+						}
 					}
-				}(scan)
+				}
+			} else if key == result.Short {
+				for _, scan := range rc.Results[key] {
+					if !seenScans[scan] {
+						scansToRun = append(scansToRun, cf.Runners[scan])
+						seenScans[scan] = true
+					}
+				}
 			}
 		}
 	}
 
-	wg.Wait()
+	return scansToRun
 }
