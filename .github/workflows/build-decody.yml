@@ -50,6 +50,6 @@ jobs:
         id: push
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
         with:
-          context: .
+          context: ./decodyService
           push: true
           tags: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:decody-${{ env.RELEASE_VERSION }},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:decody-latest"
