@@ -25,7 +25,7 @@ jobs:
       - name: Get the image name and release version
         shell: bash
         run: |
-          image_name=$(python3 -c "print('${{ env.REPO_NAME }}'.split('/', 1)[1].lower())")
+          image_name=$(python3 -c "print('${{ env.REPO_NAME }}'.lower())")
           echo "Image name = $image_name"
           echo "IMAGE_NAME=$image_name" >> $GITHUB_ENV
           release_version=$(python3 -c "print('${{ github.ref }}'.rsplit('/', 1)[1])")
@@ -41,8 +41,8 @@ jobs:
         shell: bash
         run: |
           docker build \
-          -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/decody:${{ env.RELEASE_VERSION }} \
-          -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/decody:latest \
+          -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:decody-${{ env.RELEASE_VERSION }} \
+          -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:decody-latest \
           --platform linux/amd64 \
           --push \
           decodyService/
