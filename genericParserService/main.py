@@ -1,9 +1,11 @@
 from lua_parser import Parser, ParserFinder
+from dotenv import load_dotenv
 import argparse
 import threading
 import json
 import os
 
+load_dotenv()
 
 PARSER_FOLDER = os.getenv('PARSER_FOLDER')
 if PARSER_FOLDER is None:

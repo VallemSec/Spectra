@@ -1,14 +1,10 @@
-from typing import TypedDict
-
-import pymysql
 from flask import g
 
-class RuleFormat(TypedDict):
-    id: int
-    category: str
-    explanation: str
-    condition: str
-    name: str
+import pymysql
+import os
+
+from helpers.types import DecodyDatabaseRuleFormat
+
 
 class Database:
     """
@@ -16,9 +12,26 @@ class Database:
     interacting with the database.
     """
     @staticmethod
-    def fetch_rules(rule_file_name: str) -> list[RuleFormat]:
+    def db_connect(host: str = None,
+                   port: int = None,
+                   user: str = None,
+                   password: str = None,
+                   db: str = None):
+        return pymysql.Connect(
+            host=host or os.getenv("MARIADB_HOST") or "localhost",
+            port=port or int(os.getenv("MARIADB_PORT", 0)) or 3306,
+            user=user or os.getenv("MARIADB_USER") or "root",
+            password=password or os.getenv("MARIADB_PASSWORD") or "password",
+            database=db or os.getenv("MARIADB_DATABASE") or "decody_devdb",
+            cursorclass=pymysql.cursors.DictCursor
+        )
+
+    @staticmethod
+    def fetch_rules(rule_file_name: str,
+                    connection: pymysql.Connection = None
+                    ) -> list[DecodyDatabaseRuleFormat]:
         output = list()
-        conn: pymysql.Connection = g.mariadb_conn
+        conn: pymysql.Connection = connection or g.mariadb_conn
         with conn.cursor() as cursor:
             cursor.execute("""
             SELECT r.id, r.category, r.explanation, r.`condition`, r.name 
@@ -28,7 +41,7 @@ class Database:
             results = cursor.fetchall()
             for result in results:
                 output.append(
-                    RuleFormat(
+                    DecodyDatabaseRuleFormat(
                         id = result["id"],
                         category = result["category"],
                         explanation = result["explanation"],
@@ -43,23 +56,35 @@ class Database:
         interacting with the key-value storage in the Database.
         """
         @staticmethod
-        def set(key: str, value: str) -> None:
-            conn: pymysql.Connection = g.mariadb_conn
+        def set(key: str, value: str,
+                connection: pymysql.Connection = None) -> int:
+            conn: pymysql.Connection = connection or g.mariadb_conn
             with conn.cursor() as cursor:
-                cursor.execute("""
+                affected_rows = cursor.execute("""
                 INSERT INTO `key_value` (`key`, `value`)
                 VALUES (%s, %s)
                 ON DUPLICATE KEY UPDATE `value` = %s;
                 """, (key, value, value))
             conn.commit()
+            return affected_rows
 
         @staticmethod
-        def get(key: str) -> str:
-            conn: pymysql.Connection = g.mariadb_conn
+        def get(key: str, connection: pymysql.Connection = None) -> str | None:
+            conn: pymysql.Connection = connection or g.mariadb_conn
             with conn.cursor() as cursor:
                 cursor.execute("""
                 SELECT `value` FROM `key_value`
                 WHERE `key` = %s;
                 """, (key,))
                 result = cursor.fetchone()
-                return result["value"] if result else ""
+                return result["value"] if result else None
+
+        @staticmethod
+        def delete(key: str, connection: pymysql.Connection = None) -> int:
+            conn: pymysql.Connection = connection or g.mariadb_conn
+            with conn.cursor() as cursor:
+                affected_rows = cursor.execute("""
+                DELETE FROM `key_value` WHERE `key` = %s;
+                """, (key,))
+            conn.commit()
+            return affected_rows
