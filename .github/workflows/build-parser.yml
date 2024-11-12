@@ -22,7 +22,7 @@ jobs:
     steps:
       - name: "Checkout branch"
         uses: actions/checkout@v4
-      - name: Get the image name and release version
+      - name: Get the image name and release version and config
         shell: bash
         run: |
           image_name=$(python3 -c "print('${{ env.REPO_NAME }}'.lower())")
@@ -31,6 +31,7 @@ jobs:
           release_version=$(python3 -c "print('${{ github.ref }}'.rsplit('/', 1)[1])")
           echo "Building release version $release_version"
           echo "RELEASE_VERSION=$release_version" >> $GITHUB_ENV
+          echo "$CONFIG=$(curl -s https://raw.githubusercontent.com/VallemSec/SpectraConfig/refs/heads/main/parsers/config.lua.json)" >> $GITHUB_ENV
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
@@ -43,7 +44,7 @@ jobs:
           docker build \
           -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/parser:${{ env.RELEASE_VERSION }} \
           -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/parser:latest \
-          --build-arg LUA_CONFIG_FILE="$(curl -s https://raw.githubusercontent.com/VallemSec/SpectraConfig/refs/heads/main/parsers/config.lua.json)"
+          --build-arg LUA_CONFIG_FILE="${{ env.CONFIG }}"
           --platform linux/amd64 \
           --push \
           genericParserService/
