@@ -43,7 +43,7 @@ jobs:
           docker build \
           -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/parser:${{ env.RELEASE_VERSION }} \
           -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/parser:latest \
-          --build-arg LUA_CONFIG_FILE='$(curl https://raw.githubusercontent.com/VallemSec/SpectraConfig/refs/heads/main/parsers/config.lua.json)'
+          --build-arg LUA_CONFIG_FILE="$(curl https://raw.githubusercontent.com/VallemSec/SpectraConfig/refs/heads/main/parsers/config.lua.json)"
           --platform linux/amd64 \
           --push \
           genericParserService/
