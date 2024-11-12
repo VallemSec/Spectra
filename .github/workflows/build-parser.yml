@@ -22,10 +22,6 @@ jobs:
     steps:
       - name: "Checkout branch"
         uses: actions/checkout@v4
-      - name: "Clone config repository"
-        uses: actions/checkout@v4
-        with:
-          repository: VallemSec/SpectraConfig
       - name: Get the image name and release version
         shell: bash
         run: |
@@ -47,7 +43,7 @@ jobs:
           docker build \
           -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/parser:${{ env.RELEASE_VERSION }} \
           -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/parser:latest \
-          --build-arg LUA_CONFIG_FILE="$(cat ${{ env.GITHUB_WORKSPACE }}/SpectraConfig/parsers/config.lua.json)
+          --build-arg LUA_CONFIG_FILE='$(curl https://raw.githubusercontent.com/VallemSec/SpectraConfig/refs/heads/main/parsers/config.lua.json)'
           --platform linux/amd64 \
           --push \
           genericParserService/
