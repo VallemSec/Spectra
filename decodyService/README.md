@@ -13,5 +13,5 @@ docker build -t decody .
 ```
 
 ```bash
-docker run -p 5001:5001 -v C:\Users\Fay\Documents\GitHub\Spectra\jsonSchemas:/schemas decody
+docker run -p 5001:5001 -v <path to spectra repo>/jsonSchemas:/schemas decody
 ```

@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	"encoding/base32"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"github.com/joho/godotenv"
@@ -52,7 +52,7 @@ func main() {
 				defer wg.Done()
 				runner := config.Runners[runnerName]
 
-				fromConfig, err := runScanFromConfig(runner, jsonBody.Target, decodyId, config, nil)
+				fromConfig, err := runScan(runner, jsonBody.Target, decodyId, config, nil)
 				if err != nil {
 					log.Println(err)
 					w.WriteHeader(http.StatusInternalServerError)
@@ -71,7 +71,7 @@ func main() {
 				defer wg.Done()
 				runner := config.Runners[runnerName]
 
-				fromConfig, err := runScanFromConfig(runner, jsonBody.Target, decodyId, config, nil)
+				fromConfig, err := runScan(runner, jsonBody.Target, decodyId, config, nil)
 				if err != nil {
 					log.Println(err)
 					w.WriteHeader(http.StatusInternalServerError)
@@ -135,11 +135,11 @@ func getAndUnmarshalConfigFile(configFileName string) (types.ConfigFile, error) 
 	return config, nil
 }
 
-// runScanFromConfig runs a scan from the configuration file
+// runScan runs a scan from the configuration file
 // if the scan has results that require subsequent scans, it runs the subsequent scans
 // it returns the output of the scan
-// it also protects against infinite recursion by keeping track of the scans that have been run and stopping if a scan if it's been run 3 times
-func runScanFromConfig(rf types.RunnerConfig, t, decodyId string, cf types.ConfigFile, res []string) (string, error) {
+// it also protects against infinite recursion by keeping track of the scans that have been run and stopping if a scan has been run 3 times
+func runScan(rf types.RunnerConfig, t, decodyId string, cf types.ConfigFile, res []string) (string, error) {
 	replacedArgs := utils.ReplaceTemplateArgs(rf.CmdArgs, t, res)
 	if len(replacedArgs) == 1 {
 		rf.CmdArgs = replacedArgs[0]
@@ -154,7 +154,7 @@ func runScanFromConfig(rf types.RunnerConfig, t, decodyId string, cf types.Confi
 			go func(arg []string) {
 				defer wg.Done()
 				rf.CmdArgs = arg
-				result, err := runScanFromConfig(rf, t, decodyId, cf, res)
+				result, err := runScan(rf, t, decodyId, cf, res)
 				mu.Lock()
 				defer mu.Unlock()
 				if err != nil {
@@ -264,11 +264,6 @@ func sendResultToDecody(parsedOutput types.ParserOutputJson, rf types.RunnerConf
 		Results: parsedOutput.Results,
 	}
 
-	// if rule is empty, fill it with an array containing 2 strings
-	if len(decodyInput.Rules) == 0 {
-		decodyInput.Rules = []string{"test/test.yaml", "test/test2.yaml"}
-	}
-
 	// marshal the results to send to decody
 	jsonData, err := json.Marshal(decodyInput)
 	if err != nil {
@@ -298,7 +293,9 @@ func sendResultToDecody(parsedOutput types.ParserOutputJson, rf types.RunnerConf
 func generateDecodyId(target string) string {
 	currentTime := time.Now().Unix()
 
-	target = base32.StdEncoding.EncodeToString([]byte(target))
+	h := sha256.New()
+	h.Write([]byte(target))
+	target = fmt.Sprintf("%x", h.Sum(nil))
 
 	return fmt.Sprintf("%s-%d", target, currentTime)
 }
@@ -318,7 +315,7 @@ func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t, d
 		wg.Add(1)
 		go func(result types.RunnerConfig) {
 			defer wg.Done()
-			runScanFromConfig(result, t, decodyId, cf, pout.Results[0].PassRes)
+			runScan(result, t, decodyId, cf, pout.Results[0].PassRes)
 		}(result)
 	}
 

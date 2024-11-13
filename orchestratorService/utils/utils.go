@@ -12,12 +12,7 @@ import (
 // {{pass_results}} is replaced with the first result in the results array and makes a long space seperated string out of all the results.
 // {{[pass_results]}} will return an array of args to run multiple scans with the results.
 func ReplaceTemplateArgs(args []string, t string, res []string) [][]string {
-	mayPassMultiple := OccurrencesInSlice("{{[pass_results]}}", args) > 0
-
-	willPassAmount := 0
-	if mayPassMultiple {
-		willPassAmount = len(res)
-	}
+	willPassAmount := len(res)
 
 	// replace the target in the command arguments
 	for i, arg := range args {

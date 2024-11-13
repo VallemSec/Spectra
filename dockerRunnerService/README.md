@@ -10,7 +10,7 @@ This is an example JSON to send to start the latest version of subfinder and sca
       "-d", "vallem.com"
     ],
     "volume":[
-        "C:\\absolute/path/to/folder:/internal/folder"
+        "/absolute/path/to/folder:/internal/folder"
     ],
     "env":[
         "PARSER_FOLDER=/parsers"

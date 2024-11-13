@@ -17,7 +17,7 @@ func TestCountMultipleOccurrences(t *testing.T) {
 
 // Handle an empty slice
 func TestHandleEmptySlice(t *testing.T) {
-	slice := []string{}
+	var slice []string
 	s := "apple"
 	expectedCount := 0
 
