@@ -47,7 +47,7 @@ jobs:
           docker build \
           -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/parser:${{ env.RELEASE_VERSION }} \
           -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/parser:latest \
-          --build-arg LUA_CONFIG_FILE="$(cat config.json)"
+          --build-arg LUA_CONFIG_FILE="$(cat config.json)" \
           --platform linux/amd64 \
           --push \
-          genericParserService/
+          ./genericParserService/
