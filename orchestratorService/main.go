@@ -114,10 +114,12 @@ func initializeEnv() {
 }
 
 func checkIfAllEnvVarsAreSet() {
-	if os.Getenv("DOCKER_RUNNER_SERVICE") == "" {
-		log.Fatal("DOCKER_RUNNER_SERVICE environment variable is not set, exiting....")
-	} else if os.Getenv("CONFIG_FILE_PATH") == "" {
-		log.Fatal("CONFIG_FILE_PATH environment variable is not set, exiting....")
+	envVariables := []string{"DOCKER_RUNNER_SERVICE", "CONFIG_FILE_PATH", "PARSER_IMAGE", "PARSER_VERSION", "PARSERS_FOLDER", "DECODY_SERVICE"}
+
+	for _, envVar := range envVariables {
+		if os.Getenv(envVar) == "" {
+			log.Fatalf("%s environment variable is not set, exiting....", envVar)
+		}
 	}
 }
 
@@ -228,8 +230,8 @@ func sendResultToParser(runConf types.RunnerConfig, containerOutput string) type
 	containerOutput = utils.CleanControlCharacters(containerOutput)
 
 	serviceOut, err := runDockerService(types.RunnerConfig{
-		Image:        "nekoluka/spectra-scanner",
-		ImageVersion: "1.0.1",
+		Image:        os.Getenv("PARSER_IMAGE"),
+		ImageVersion: os.Getenv("PARSER_VERSION"),
 		CmdArgs:      []string{runConf.ContainerName, runConf.ParserPlugin, containerOutput},
 	}, []string{os.Getenv("PARSERS_FOLDER") + ":/parsers"}, []string{"PARSER_FOLDER=/parsers"})
 	if err != nil {
@@ -253,10 +255,9 @@ func sendResultToParser(runConf types.RunnerConfig, containerOutput string) type
 }
 
 func sendResultToDecody(parsedOutput types.ParserOutputJson, rf types.RunnerConfig, decodyId string) {
-	// TODO: UNCOMMENT THIS, THIS IS FOR TESTING
-	/*if rf.Report == false || len(rf.DecodyRule) == 0 {
+	if rf.Report == false || len(rf.DecodyRule) == 0 {
 		return
-	}*/
+	}
 
 	decodyInput := types.DecodyInput{
 		Name:    rf.ContainerName,
