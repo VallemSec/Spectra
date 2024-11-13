@@ -78,3 +78,9 @@ type RunnerJSON struct {
 	Volumes          []string `json:"volume"`
 	Env              []string `json:"env"`
 }
+
+type DecodyInput struct {
+	Name    string   `json:"name"`
+	Rules   []string `json:"rules"`
+	Results []Result `json:"results"`
+}

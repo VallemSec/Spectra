@@ -31,7 +31,6 @@ func main() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		var jsonBody types.JSONbody
-		decodyId := generateDecodyId(jsonBody.Target)
 
 		err = json.NewDecoder(r.Body).Decode(&jsonBody)
 		jsonBody.Target, err = utils.NormalizeTarget(jsonBody.Target)
@@ -41,6 +40,8 @@ func main() {
 			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
 		}
+
+		decodyId := generateDecodyId(jsonBody.Target)
 
 		var wg sync.WaitGroup
 
@@ -84,6 +85,21 @@ func main() {
 
 		// Wait for all scans to complete
 		wg.Wait()
+
+		// get the results from decody
+		resp, err := http.Get(os.Getenv("DECODY_SERVICE") + "/generate/" + decodyId)
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			return
+		}
+
+		// return the results from decody to the client
+		io.Copy(w, resp.Body)
+
+		fmt.Println("Finished running all scans")
+
 	})
 
 	if err := http.ListenAndServe(":8080", nil); err != nil {
@@ -171,7 +187,7 @@ func runScanFromConfig(rf types.RunnerConfig, t, decodyId string, cf types.Confi
 
 	pr := sendResultToParser(rf, sr)
 
-	sendResultToDecody(sr, decodyId)
+	sendResultToDecody(pr, rf, decodyId)
 
 	runSubsequentScans(pr, rf, t, decodyId, cf)
 
@@ -236,9 +252,28 @@ func sendResultToParser(runConf types.RunnerConfig, containerOutput string) type
 	}
 }
 
-func sendResultToDecody(parsedOutput, decodyId string) {
+func sendResultToDecody(parsedOutput types.ParserOutputJson, rf types.RunnerConfig, decodyId string) {
+	if rf.Report == false || len(rf.DecodyRule) == 0 {
+		return
+	}
+
+	decodyInput := types.DecodyInput{
+		Name:    rf.ContainerName,
+		Rules:   rf.DecodyRule,
+		Results: parsedOutput.Results,
+	}
+
+	// marshal the results to send to decody
+	jsonData, err := json.Marshal(decodyInput)
+	if err != nil {
+		log.Println("Error marshalling decody input:", err)
+		return
+	}
+
+	fmt.Println(os.Getenv("DECODY_SERVICE") + "/load/" + decodyId)
+
 	// send the results to decody
-	_, err := http.Post(os.Getenv("DECODY_SERVICE"+"/"+decodyId), "application/json", bytes.NewBuffer([]byte(parsedOutput)))
+	_, err = http.Post(os.Getenv("DECODY_SERVICE")+"/load/"+decodyId, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		log.Println("Error sending results to decody:", err)
 	}
