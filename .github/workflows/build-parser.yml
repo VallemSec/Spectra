@@ -31,7 +31,8 @@ jobs:
           release_version=$(python3 -c "print('${{ github.ref }}'.rsplit('/', 1)[1])")
           echo "Building release version $release_version"
           echo "RELEASE_VERSION=$release_version" >> $GITHUB_ENV
-          echo "$CONFIG=$(curl -s https://raw.githubusercontent.com/VallemSec/SpectraConfig/refs/heads/main/parsers/config.lua.json)" >> $GITHUB_ENV
+          config=$(curl -s https://raw.githubusercontent.com/VallemSec/SpectraConfig/refs/heads/main/parsers/config.lua.json)
+          echo "$CONFIG=$config" >> $GITHUB_ENV
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
