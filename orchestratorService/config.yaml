@@ -5,9 +5,6 @@ always_run:
 runners:
     NMAP:
         cmdargs:
-            - "python"
-            - "main.py"
-            - "-t"
             - "quick"
             - "{{req_domain}}"
         # If the generated JSON from the parser should be send to decody
