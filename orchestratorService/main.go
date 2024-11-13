@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/base32"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,40 +12,24 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"main/types"
 	"main/utils"
-
-	"github.com/joho/godotenv"
-	"gopkg.in/yaml.v2"
 )
 
 var previousScans []string
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file, exiting....")
-	}
+	initializeEnv()
 
-	if os.Getenv("DOCKER_RUNNER_SERVICE") == "" {
-		log.Fatal("DOCKER_RUNNER_SERVICE environment variable is not set, exiting....")
-	} else if os.Getenv("CONFIG_FILE_PATH") == "" {
-		log.Fatal("CONFIG_FILE_PATH environment variable is not set, exiting....")
-	}
+	checkIfAllEnvVarsAreSet()
 
-	configFileName := os.Getenv("CONFIG_FILE_PATH")
-	yamlFile, err := os.ReadFile(configFileName)
-	if err != nil {
-		log.Fatalf("Could not read config.yaml read error: %v", err)
-	}
-
-	var config types.ConfigFile
-	if err := yaml.Unmarshal(yamlFile, &config); err != nil {
-		log.Fatalf("Failed to unmarshall the config, this is typically due to a malformed config Unmarshalling error: %v", err)
-	}
+	config, err := getAndUnmarshalConfigFile(os.Getenv("CONFIG_FILE_PATH"))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		var jsonBody types.JSONbody
+		decodyId := generateDecodyId(jsonBody.Target)
 
 		err = json.NewDecoder(r.Body).Decode(&jsonBody)
 		jsonBody.Target, err = utils.NormalizeTarget(jsonBody.Target)
@@ -219,6 +204,18 @@ func sendResultToParser(runConf types.RunnerConfig, containerOutput string) type
 	}
 }
 
+func sendResultToDecody(containerOutput string) {}
+
+// generateDecodyId makes a new unique identifier for the scan to send to decody based on the target and the current time
+// id is in the format: base32(<target>)-<timestamp>
+func generateDecodyId(target string) string {
+	currentTime := time.Now().Unix()
+
+	target = base32.StdEncoding.EncodeToString([]byte(target))
+
+	return fmt.Sprintf("%s-%d", target, currentTime)
+}
+
 // runSubsequentScans runs scans if the initials scans have vulnerabilities that require subsequent scans
 // it runs the scans that are in the results map of the runner config
 // TODO: send parsed results to decody
@@ -236,6 +233,7 @@ func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t st
 		go func(result types.RunnerConfig) {
 			defer wg.Done()
 			runScanFromConfig(result, t, cf, pout.Results[0].PassRes)
+
 		}(result)
 	}
 
