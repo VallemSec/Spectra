@@ -46,42 +46,10 @@ func main() {
 		var wg sync.WaitGroup
 
 		// Run DiscoveryRunners concurrently
-		for _, runnerName := range config.DiscoveryRunners {
-			wg.Add(1)
-			go func(runnerName string) {
-				defer wg.Done()
-				runner := config.Runners[runnerName]
-
-				fromConfig, err := runScan(runner, jsonBody.Target, decodyId, config, nil)
-				if err != nil {
-					log.Println(err)
-					w.WriteHeader(http.StatusInternalServerError)
-					json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-					return
-				}
-
-				fmt.Println("runFromConfig: ", fromConfig)
-			}(runnerName)
-		}
+		runRunnersConcurrently(config.DiscoveryRunners, config, jsonBody, decodyId, w, &wg)
 
 		// Run AlwaysRun concurrently
-		for _, runnerName := range config.AlwaysRun {
-			wg.Add(1)
-			go func(runnerName string) {
-				defer wg.Done()
-				runner := config.Runners[runnerName]
-
-				fromConfig, err := runScan(runner, jsonBody.Target, decodyId, config, nil)
-				if err != nil {
-					log.Println(err)
-					w.WriteHeader(http.StatusInternalServerError)
-					json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-					return
-				}
-
-				fmt.Println("runFromConfig: ", fromConfig)
-			}(runnerName)
-		}
+		runRunnersConcurrently(config.AlwaysRun, config, jsonBody, decodyId, w, &wg)
 
 		// Wait for all scans to complete
 		wg.Wait()
@@ -104,6 +72,26 @@ func main() {
 
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func runRunnersConcurrently(runners []string, config types.ConfigFile, jsonBody types.JSONbody, decodyId string, w http.ResponseWriter, wg *sync.WaitGroup) {
+	for _, runnerName := range runners {
+		wg.Add(1)
+		go func(runnerName string) {
+			defer wg.Done()
+			runner := config.Runners[runnerName]
+
+			fromConfig, err := runScan(runner, jsonBody.Target, decodyId, config, nil)
+			if err != nil {
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+				return
+			}
+
+			fmt.Println("runFromConfig: ", fromConfig)
+		}(runnerName)
 	}
 }
 
