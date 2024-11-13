@@ -5,6 +5,8 @@ import (
 	"encoding/base32"
 	"encoding/json"
 	"fmt"
+	"github.com/joho/godotenv"
+	"gopkg.in/yaml.v2"
 	"io"
 	"log"
 	"net/http"
@@ -49,7 +51,7 @@ func main() {
 				defer wg.Done()
 				runner := config.Runners[runnerName]
 
-				fromConfig, err := runScanFromConfig(runner, jsonBody.Target, config, nil)
+				fromConfig, err := runScanFromConfig(runner, jsonBody.Target, decodyId, config, nil)
 				if err != nil {
 					log.Println(err)
 					w.WriteHeader(http.StatusInternalServerError)
@@ -68,7 +70,7 @@ func main() {
 				defer wg.Done()
 				runner := config.Runners[runnerName]
 
-				fromConfig, err := runScanFromConfig(runner, jsonBody.Target, config, nil)
+				fromConfig, err := runScanFromConfig(runner, jsonBody.Target, decodyId, config, nil)
 				if err != nil {
 					log.Println(err)
 					w.WriteHeader(http.StatusInternalServerError)
@@ -89,11 +91,39 @@ func main() {
 	}
 }
 
+func initializeEnv() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error loading .env file, exiting....")
+	}
+}
+
+func checkIfAllEnvVarsAreSet() {
+	if os.Getenv("DOCKER_RUNNER_SERVICE") == "" {
+		log.Fatal("DOCKER_RUNNER_SERVICE environment variable is not set, exiting....")
+	} else if os.Getenv("CONFIG_FILE_PATH") == "" {
+		log.Fatal("CONFIG_FILE_PATH environment variable is not set, exiting....")
+	}
+}
+
+func getAndUnmarshalConfigFile(configFileName string) (types.ConfigFile, error) {
+	yamlFile, err := os.ReadFile(configFileName)
+	if err != nil {
+		return types.ConfigFile{}, fmt.Errorf("could not read %s read config error: %v", configFileName, err)
+	}
+
+	var config types.ConfigFile
+	if err := yaml.Unmarshal(yamlFile, &config); err != nil {
+		return types.ConfigFile{}, fmt.Errorf("failed to unmarshall the config, this is typically due to a malformed config Unmarshalling error: %v", err)
+	}
+
+	return config, nil
+}
+
 // runScanFromConfig runs a scan from the configuration file
 // if the scan has results that require subsequent scans, it runs the subsequent scans
 // it returns the output of the scan
 // it also protects against infinite recursion by keeping track of the scans that have been run and stopping if a scan if it's been run 3 times
-func runScanFromConfig(rf types.RunnerConfig, t string, cf types.ConfigFile, res []string) (string, error) {
+func runScanFromConfig(rf types.RunnerConfig, t, decodyId string, cf types.ConfigFile, res []string) (string, error) {
 	replacedArgs := utils.ReplaceTemplateArgs(rf.CmdArgs, t, res)
 	if len(replacedArgs) == 1 {
 		rf.CmdArgs = replacedArgs[0]
@@ -108,7 +138,7 @@ func runScanFromConfig(rf types.RunnerConfig, t string, cf types.ConfigFile, res
 			go func(arg []string) {
 				defer wg.Done()
 				rf.CmdArgs = arg
-				result, err := runScanFromConfig(rf, t, cf, res)
+				result, err := runScanFromConfig(rf, t, decodyId, cf, res)
 				mu.Lock()
 				defer mu.Unlock()
 				if err != nil {
@@ -141,7 +171,9 @@ func runScanFromConfig(rf types.RunnerConfig, t string, cf types.ConfigFile, res
 
 	pr := sendResultToParser(rf, sr)
 
-	runSubsequentScans(pr, rf, t, cf)
+	sendResultToDecody(sr, decodyId)
+
+	runSubsequentScans(pr, rf, t, decodyId, cf)
 
 	return sr, nil
 }
@@ -162,7 +194,7 @@ func runDockerService(runConf types.RunnerConfig, volumes, env []string) (string
 		return "", err
 	}
 
-	resp, err := http.Post("http://"+os.Getenv("DOCKER_RUNNER_SERVICE"), "application/json", bytes.NewBuffer(jsonValue))
+	resp, err := http.Post(os.Getenv("DOCKER_RUNNER_SERVICE"), "application/json", bytes.NewBuffer(jsonValue))
 	if err != nil {
 		return "", err
 	}
@@ -204,7 +236,13 @@ func sendResultToParser(runConf types.RunnerConfig, containerOutput string) type
 	}
 }
 
-func sendResultToDecody(containerOutput string) {}
+func sendResultToDecody(parsedOutput, decodyId string) {
+	// send the results to decody
+	_, err := http.Post(os.Getenv("DECODY_SERVICE"+"/"+decodyId), "application/json", bytes.NewBuffer([]byte(parsedOutput)))
+	if err != nil {
+		log.Println("Error sending results to decody:", err)
+	}
+}
 
 // generateDecodyId makes a new unique identifier for the scan to send to decody based on the target and the current time
 // id is in the format: base32(<target>)-<timestamp>
@@ -218,8 +256,7 @@ func generateDecodyId(target string) string {
 
 // runSubsequentScans runs scans if the initials scans have vulnerabilities that require subsequent scans
 // it runs the scans that are in the results map of the runner config
-// TODO: send parsed results to decody
-func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t string, cf types.ConfigFile) {
+func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t, decodyId string, cf types.ConfigFile) {
 	scansToRun := findScansToRun(pout, rc, cf)
 
 	if scansToRun == nil {
@@ -232,8 +269,7 @@ func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t st
 		wg.Add(1)
 		go func(result types.RunnerConfig) {
 			defer wg.Done()
-			runScanFromConfig(result, t, cf, pout.Results[0].PassRes)
-
+			runScanFromConfig(result, t, decodyId, cf, pout.Results[0].PassRes)
 		}(result)
 	}
 
