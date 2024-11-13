@@ -253,14 +253,20 @@ func sendResultToParser(runConf types.RunnerConfig, containerOutput string) type
 }
 
 func sendResultToDecody(parsedOutput types.ParserOutputJson, rf types.RunnerConfig, decodyId string) {
-	if rf.Report == false || len(rf.DecodyRule) == 0 {
+	// TODO: UNCOMMENT THIS, THIS IS FOR TESTING
+	/*if rf.Report == false || len(rf.DecodyRule) == 0 {
 		return
-	}
+	}*/
 
 	decodyInput := types.DecodyInput{
 		Name:    rf.ContainerName,
 		Rules:   rf.DecodyRule,
 		Results: parsedOutput.Results,
+	}
+
+	// if rule is empty, fill it with an array containing 2 strings
+	if len(decodyInput.Rules) == 0 {
+		decodyInput.Rules = []string{"test/test.yaml", "test/test2.yaml"}
 	}
 
 	// marshal the results to send to decody
@@ -273,10 +279,18 @@ func sendResultToDecody(parsedOutput types.ParserOutputJson, rf types.RunnerConf
 	fmt.Println(os.Getenv("DECODY_SERVICE") + "/load/" + decodyId)
 
 	// send the results to decody
-	_, err = http.Post(os.Getenv("DECODY_SERVICE")+"/load/"+decodyId, "application/json", bytes.NewBuffer(jsonData))
+	res, err := http.Post(os.Getenv("DECODY_SERVICE")+"/load/"+decodyId, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		log.Println("Error sending results to decody:", err)
 	}
+
+	// read the response from decody
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		log.Println("Error reading response from decody:", err)
+	}
+
+	fmt.Println("Decody response: ", string(body))
 }
 
 // generateDecodyId makes a new unique identifier for the scan to send to decody based on the target and the current time

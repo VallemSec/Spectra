@@ -2,8 +2,8 @@ from typing import TypedDict
 
 
 class ResultObjectFormat(TypedDict):
-    err_short: str
-    err_long: str
+    short: str
+    long: str
 
 class LoadEndpointInputFormat(TypedDict):
     name: str

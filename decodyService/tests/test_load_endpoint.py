@@ -12,7 +12,7 @@ class TestLoadEndpoint(unittest.TestCase):
         from main import app
         with (app.app_context(),
               mock.patch('helpers.Database.fetch_rules', return_value=[{
-                  "condition": "err_short == 'error1'",
+                  "condition": "short == 'error1'",
                   "category": "cat1",
                   "explanation": "exp1",
                   "name": "name1"
@@ -25,7 +25,7 @@ class TestLoadEndpoint(unittest.TestCase):
                 response = client.post(f"/load/{request_id}", json={
                     "name": "test",
                     "rules": ["rule1.json"],
-                    "results": [{"err_short": "error1"}]
+                    "results": [{"short": "error1"}]
                 })
             self.assertEqual(response.status_code, 201)
             mock_set.assert_any_call(f"{request_id}-input", mock.ANY)

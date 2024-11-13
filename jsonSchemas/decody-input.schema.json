@@ -17,17 +17,16 @@
         "items": {
           "type": "object",
           "properties": {
-            "err_short": {
+            "short": {
               "type": "string"
             },
-            "err_long": {
+            "long": {
               "type": "string"
             }
           },
-          "required": ["err_short"]
+          "required": ["short"]
         }
       }
     },
     "required": ["name", "rules", "results"]
   }
-  
