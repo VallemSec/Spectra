@@ -1,0 +1,31 @@
+discovery_runners:
+  - NMAP
+
+always_run:
+
+runners:
+  NMAP:
+    cmdargs:
+      - "-t"
+      - "quick"
+      - "{{req_domain}}"
+    report: false
+    container_name: nmap
+    image: ghcr.io/vallemsec/spectra/portscanner
+    image_version: latest
+    parser_plugin: nmap
+    results:
+      80:
+        - EXAMPLESCAN
+
+  EXAMPLESCAN:
+    cmdargs:
+      - "{{req_domain}}"
+    report: true
+    container_name: examplescan
+    image: examplescan
+    image_version: local
+    parser_plugin: examplescan.lua
+    decody_rule:
+      - examplescan_rules.yaml
+    results:

@@ -1,0 +1,41 @@
+volumes:
+  mariadb_volume:
+
+services:
+  mariadb:
+    image: mariadb:lts-ubi9
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MARIADB_DATABASE: spectra
+    volumes: 
+      - ./sqlScripts:/docker-entrypoint-initdb.d
+      - mariadb_volume:/var/lib/mysql
+
+  orchestrator:
+    image: ghcr.io/vallemsec/spectra/orchestrator
+    restart: unless-stopped
+    environment:
+      CONFIG_FILE_PATH: /app/config.yaml
+      DOCKER_RUNNER_SERVICE: http://dockerrunner:8080
+      PARSERS_FOLDER: /home/manager/SpectraConfig/parsers
+      PARSER_IMAGE: ghcr.io/vallemsec/spectra/parser
+      PARSER_IMAGE_TAG: latest
+      DECODY_SERVICE: http://decody:5001
+    volumes:
+      - ./orchestrator-config.yaml:/app/config.yaml
+
+  decody:
+    image: ghcr.io/vallemsec/spectra/decody
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MARIADB_DATABASE: spectra
+    volumes:
+      - ./jsonSchemas:/schemas
+
+  dockerrunner:
+    image: ghcr.io/vallemsec/spectra/dockerrunner
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
