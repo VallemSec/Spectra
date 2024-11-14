@@ -127,8 +127,9 @@ func CleanParserOutput(input string) string {
 }
 
 func CleanControlCharacters(input string) string {
+	// TODO: Actully make this work instead of hardcoding the control characters
 	// Define a regular expression to match control characters, including Unicode control characters
-	re := regexp.MustCompile(`\\u0001|\\u0000o|\\u0000|\\ufffd|\\u0000O`)
+	re := regexp.MustCompile(`\\u0001|\\u0000o|\\u0000O|\\u0000|\\ufffd`)
 	// Replace all control characters with an empty string
 	return re.ReplaceAllString(input, "")
 }
