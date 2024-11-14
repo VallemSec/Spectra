@@ -96,7 +96,7 @@ func runRunnersConcurrently(runners []string, config types.ConfigFile, jsonBody 
 }
 
 func checkIfAllEnvVarsAreSet() {
-	envVariables := []string{"DOCKER_RUNNER_SERVICE", "CONFIG_FILE_PATH", "PARSERS_FOLDER", "PARSER_IMAGE", "PARSER_IMAGE_TAG", "DECODY_SERVICE"}
+	envVariables := []string{"DOCKER_RUNNER_SERVICE", "CONFIG_FILE_PATH", "PARSERS_FOLDER", "PARSER_IMAGE", "PARSER_VERSION", "DECODY_SERVICE"}
 
 	for _, envVar := range envVariables {
 		if os.Getenv(envVar) == "" {
