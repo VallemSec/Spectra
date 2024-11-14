@@ -1,0 +1,3 @@
+{$DOMAIN} {
+	reverse_proxy orchestrator:8080
+}
