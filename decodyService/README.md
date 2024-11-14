@@ -8,4 +8,10 @@ creates a rapport that is understandable for people with little technical knowle
 - Put results together in a rapport
 - if no results are found, ask chatGPT to generate a description of the vulnerability
 
-`docker build -t decody .`
+```bash
+docker build -t decody .
+```
+
+```bash
+docker run -p 5001:5001 -v <path to spectra repo>/jsonSchemas:/schemas decody
+```

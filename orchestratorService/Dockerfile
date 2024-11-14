@@ -28,8 +28,11 @@ RUN apk add --no-cache ca-certificates
 # Set the Current Working Directory inside the container
 WORKDIR /root/
 
-# Copy the pre-built binary file from the builder stage
+# Copy all the files from the previous stage
 COPY --from=builder /app/main .
+
+# Copy the config file
+COPY config.yaml .
 
 # Ensure the binary has executable permissions
 RUN chmod +x ./main

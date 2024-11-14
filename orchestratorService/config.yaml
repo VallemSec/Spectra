@@ -1,0 +1,42 @@
+discovery_runners:
+    - NMAP
+always_run:
+
+runners:
+    NMAP:
+        cmdargs:
+            - "-t"
+            - "quick"
+            - "{{req_domain}}"
+        # If the generated JSON from the parser should be send to decody
+        report: false
+        container_name: nmap
+        image: nmap-scanner
+        image_version: latest
+        # Which plugin to use to parse the STDOUT
+        parser_plugin: nmap
+        results:
+            FTP:
+                - ftpscan
+            # if we find port 80 open, we will run nuclei which will in turn run SSLyze if it finds any SSL issues
+            #80:
+            #    - NUCLEI
+            #if we find port 22 open, we will run SSHscan
+            SSH:
+                - SSHscan
+    NUCLEI:
+        cmdargs:
+            - "-target"
+            - "{{req_domain}}"
+            - "-t"
+            - "ssl"
+            - "{{[pass_results]}}"
+        report: true
+        container_name: nuclei
+        image: projectdiscovery/nuclei
+        image_version: latest
+        parser_plugin: spectra/nuclei
+        decody_rule:
+            # Config for decody to handle incoming from Nuclei
+            - "nuclei_rules.yaml"
+        results:

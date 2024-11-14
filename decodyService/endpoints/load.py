@@ -62,7 +62,7 @@ def load_endpoint(request_id: str) -> tuple[str, int]:
             if not safe_eval(
                     rule["condition"],
                      {
-                         "err_short": result["err_short"]
+                         "short": result["short"]
                      }):
                 continue
 
