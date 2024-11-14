@@ -102,7 +102,7 @@ func initializeEnv() {
 }
 
 func checkIfAllEnvVarsAreSet() {
-	envVariables := []string{"DOCKER_RUNNER_SERVICE", "CONFIG_FILE_PATH", "PARSER_IMAGE", "PARSER_VERSION", "PARSERS_FOLDER", "DECODY_SERVICE"}
+	envVariables := []string{"DOCKER_RUNNER_SERVICE", "CONFIG_FILE_PATH", "PARSERS_FOLDER", "PARSER_IMAGE", "PARSER_IMAGE_TAG", "DECODY_SERVICE"}
 
 	for _, envVar := range envVariables {
 		if os.Getenv(envVar) == "" {

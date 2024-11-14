@@ -31,9 +31,6 @@ WORKDIR /root/
 # Copy all the files from the previous stage
 COPY --from=builder /app/main .
 
-# Copy the .env file
-COPY .env .
-
 # Copy the config file
 COPY config.yaml .
 
