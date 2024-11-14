@@ -23,7 +23,7 @@ import (
 var previousScans []string
 
 func main() {
-	initializeEnv()
+	godotenv.Load()
 
 	checkIfAllEnvVarsAreSet()
 
@@ -92,12 +92,6 @@ func runRunnersConcurrently(runners []string, config types.ConfigFile, jsonBody 
 
 			fmt.Println("runFromConfig: ", fromConfig)
 		}(runnerName)
-	}
-}
-
-func initializeEnv() {
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file, exiting....")
 	}
 }
 
