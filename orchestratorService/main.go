@@ -98,10 +98,21 @@ func runRunnersConcurrently(runners []string, config types.ConfigFile, jsonBody 
 
 func checkIfAllEnvVarsAreSet() {
 	envVariables := []string{"DOCKER_RUNNER_SERVICE", "CONFIG_FILE_PATH", "PARSERS_FOLDER", "PARSER_IMAGE", "PARSER_VERSION", "DECODY_SERVICE"}
+	defaultValueVariables := map[string]string{
+		"DOCKER_RUNNER_SERVICE": "http://dockerrunner:8080",
+		"PARSER_IMAGE":          "ghcr.io/vallemsec/spectra/parser",
+		"PARSER_VERSION":        "latest",
+		"DECODY_SERVICE":        "http://decody:5001",
+	}
 
 	for _, envVar := range envVariables {
-		if os.Getenv(envVar) == "" {
+		if os.Getenv(envVar) == "" && defaultValueVariables[envVar] == "" {
 			log.Fatalf("%s environment variable is not set, exiting....", envVar)
+		}
+		if os.Getenv(envVar) == "" {
+			if os.Setenv(envVar, defaultValueVariables[envVar]) != nil {
+				log.Fatalf("could not set %s, exiting...", envVar)
+			}
 		}
 	}
 }
