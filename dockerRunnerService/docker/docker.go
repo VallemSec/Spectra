@@ -6,6 +6,7 @@ import (
 	"github.com/docker/docker/api/types/image"
 	_ "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/stdcopy"
 	"golang.org/x/net/context"
 	"io"
 )
@@ -27,7 +28,7 @@ func CheckLocalImg(ctx context.Context, c *client.Client, iN string) (bool, erro
 	return false, nil
 }
 
-func StartAndReadLogs(ctx context.Context, c *client.Client, containerName string, containerCommand, volumes, envVars []string) (*bytes.Buffer, string, error) {
+func StartAndReadLogs(ctx context.Context, c *client.Client, containerName string, containerCommand, volumes, envVars []string, tty bool) (*bytes.Buffer, *bytes.Buffer, string, error) {
 	hostConfig := &container.HostConfig{
 		Binds: volumes,
 	}
@@ -35,39 +36,46 @@ func StartAndReadLogs(ctx context.Context, c *client.Client, containerName strin
 	resp, err := c.ContainerCreate(ctx, &container.Config{
 		Image: containerName,
 		Cmd:   containerCommand,
-		Tty:   false,
+		Tty:   tty,
 		Env:   envVars,
 	}, hostConfig, nil, nil, "")
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
 
 	err = c.ContainerStart(ctx, resp.ID, container.StartOptions{})
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
 
 	statusCh, errCh := c.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
 	select {
 	case err := <-errCh:
 		if err != nil {
-			return nil, "", err
+			return nil, nil, "", err
 		}
 	case <-statusCh:
 	}
 
 	out, err := c.ContainerLogs(ctx, resp.ID, container.LogsOptions{ShowStdout: true, ShowStderr: true, Follow: true})
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
-
 	defer out.Close()
 
-	buf := new(bytes.Buffer)
-	_, err = io.Copy(buf, out)
-	if err != nil {
-		return nil, "", err
+	stdout := new(bytes.Buffer)
+	stderr := new(bytes.Buffer)
+	if !tty {
+		_, err = stdcopy.StdCopy(stdout, stderr, out)
+		if err != nil {
+			return nil, nil, "", err
+		}
+	} else {
+		_, err = io.Copy(stdout, out)
+		if err != nil {
+			return nil, nil, "", err
+		}
 	}
 
-	return buf, resp.ID, nil
+	return stdout, stderr, resp.ID, nil
 }
