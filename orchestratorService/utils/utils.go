@@ -129,7 +129,7 @@ func CleanParserOutput(input string) string {
 func CleanControlCharacters(input string) string {
 	// TODO: Actully make this work instead of hardcoding the control characters
 	// Define a regular expression to match control characters, including Unicode control characters
-	re := regexp.MustCompile(`(?im)\\u[0-9]*[a-z]?\*?#?`)
+	re := regexp.MustCompile(`(?im)\\u[a-z]*[0-9]*[a-z]?\*?#?`)
 	// Replace all control characters with an empty string
 	return re.ReplaceAllString(input, "")
 }
