@@ -27,10 +27,11 @@ func main() {
 
 	checkIfAllEnvVarsAreSet()
 
-	config, err := getAndUnmarshalConfigFile(os.Getenv("CONFIG_FILE_PATH"))
-
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		var jsonBody types.JSONbody
+
+		// TODO: Read the config once and make copies when replacing args in runScan DO NOT MODIFY THE CONFIG ONCE IT IS READ
+		config, err := getAndUnmarshalConfigFile(os.Getenv("CONFIG_FILE_PATH"))
 
 		err = json.NewDecoder(r.Body).Decode(&jsonBody)
 		jsonBody.Target, err = utils.NormalizeTarget(jsonBody.Target)
