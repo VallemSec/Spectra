@@ -187,6 +187,7 @@ func runDockerService(runConf types.RunnerConfig, volumes, env []string) (string
 		ContainerCommand: runConf.CmdArgs,
 		Volumes:          volumes,
 		Env:              env,
+		Tty:              runConf.Tty,
 	}
 
 	jsonValue, err := json.Marshal(configJSON)

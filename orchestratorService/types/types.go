@@ -24,6 +24,7 @@ type RunnerConfig struct {
 	ParserPlugin  string              `yaml:"parser_plugin"`
 	DecodyRule    []string            `yaml:"decody_rule,omitempty"`
 	Results       map[string][]string `yaml:"results"`
+	Tty           bool                `yaml:"tty"`
 }
 
 type ParserOutputJson struct {
@@ -77,6 +78,7 @@ type RunnerJSON struct {
 	ContainerCommand []string `json:"containerCommand"`
 	Volumes          []string `json:"volume"`
 	Env              []string `json:"env"`
+	Tty              bool     `json:"tty"`
 }
 
 type DecodyInput struct {
