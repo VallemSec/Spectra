@@ -1,17 +1,7 @@
 services:
-  webserver:
-    image: nginx:latest
-    restart: always
-    ports:
-      - '8080:80'
-    volumes:
-      - ./public:/var/www/html
-      - ./default.conf:/etc/nginx/conf.d/default.conf
-    links:
-      - php-fpm
-
-  php-fpm:
-    image: php:8.3-fpm
-    restart: always
-    volumes:
-      - ./public:/var/www/html
+    webserver:
+        image: nginx:1.27.2
+        ports:
+            - 8080:80
+        volumes:
+            - ./dist:/usr/share/nginx/html
