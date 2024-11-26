@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/joho/godotenv"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"regexp"
@@ -20,23 +20,47 @@ import (
 	"main/utils"
 )
 
-var previousScans []string
+var globalConfig types.ConfigFile
+var log = logrus.New()
+
+func init() {
+	log.Level = logrus.DebugLevel
+	log.Formatter = &logrus.TextFormatter{DisableColors: true}
+	log.Out = os.Stderr
+
+	log.Info("Initializing program")
+
+	godotenv.Load()
+	enforceEnvVars()
+	log.Info("Loaded env vars")
+
+	level, err := logrus.ParseLevel(os.Getenv("LOG_LEVEL"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Level = level
+	log.Debugf("Set log level to %s", log.GetLevel())
+
+	globalConfig, err = getAndUnmarshalConfigFile(os.Getenv("CONFIG_FILE_PATH"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Info("Loaded config file")
+}
 
 func main() {
-	godotenv.Load()
-
 	checkIfAllEnvVarsAreSet()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		var jsonBody types.JSONbody
+		var previousScans []types.RunnerConfig
 
-		// TODO: Read the config once and make copies when replacing args in runScan DO NOT MODIFY THE CONFIG ONCE IT IS READ
-		config, err := getAndUnmarshalConfigFile(os.Getenv("CONFIG_FILE_PATH"))
+		err := json.NewDecoder(r.Body).Decode(&jsonBody)
 
 		err = json.NewDecoder(r.Body).Decode(&jsonBody)
 		jsonBody.Target, err = utils.NormalizeTarget(jsonBody.Target)
 		if err != nil {
-			log.Println(err)
+			log.Error(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
@@ -44,13 +68,17 @@ func main() {
 
 		decodyId := generateDecodyId(jsonBody.Target)
 
+		requestLogger := log.WithField("DecodyId", decodyId)
+
 		var wg sync.WaitGroup
+		config := copyConfig()
+		requestLogger.Trace("Created copy of the config")
 
 		// Run DiscoveryRunners concurrently
-		runRunnersConcurrently(config.DiscoveryRunners, config, jsonBody, decodyId, w, &wg)
+		runRunnersConcurrently(config.DiscoveryRunners, config, jsonBody, decodyId, w, &wg, previousScans, requestLogger)
 
 		// Run AlwaysRun concurrently
-		runRunnersConcurrently(config.AlwaysRun, config, jsonBody, decodyId, w, &wg)
+		runRunnersConcurrently(config.AlwaysRun, config, jsonBody, decodyId, w, &wg, previousScans, requestLogger)
 
 		// Wait for all scans to complete
 		wg.Wait()
@@ -58,7 +86,7 @@ func main() {
 		// get the results from decody
 		resp, err := http.Get(os.Getenv("DECODY_SERVICE") + "/generate/" + decodyId)
 		if err != nil {
-			log.Println(err)
+			requestLogger.Error(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
@@ -67,8 +95,7 @@ func main() {
 		// return the results from decody to the client
 		io.Copy(w, resp.Body)
 
-		fmt.Println("Finished running all scans")
-
+		requestLogger.Info("Finished running all scans")
 	})
 
 	if err := http.ListenAndServe(":8080", nil); err != nil {
@@ -76,22 +103,55 @@ func main() {
 	}
 }
 
-func runRunnersConcurrently(runners []string, config types.ConfigFile, jsonBody types.JSONbody, decodyId string, w http.ResponseWriter, wg *sync.WaitGroup) {
+func copyConfig() types.ConfigFile {
+	// Errors are ignored since they should not show up since the object originates from a yaml file
+	// which should already have stopped the program upon initializing if faulty
+	var configCopy types.ConfigFile
+
+	data, _ := yaml.Marshal(globalConfig)
+	_ = yaml.Unmarshal(data, &configCopy)
+
+	return configCopy
+}
+
+func enforceEnvVars() {
+	envVariables := []string{"DOCKER_RUNNER_SERVICE", "CONFIG_FILE_PATH", "PARSERS_FOLDER", "PARSER_IMAGE", "PARSER_VERSION", "DECODY_SERVICE", "LOG_LEVEL"}
+	defaultValueVariables := map[string]string{
+		"DOCKER_RUNNER_SERVICE": "http://dockerrunner:8080",
+		"PARSER_IMAGE":          "ghcr.io/vallemsec/spectra/parser",
+		"PARSER_VERSION":        "latest",
+		"DECODY_SERVICE":        "http://decody:5001",
+		"LOG_LEVEL":             "warn",
+	}
+
+	for _, envVar := range envVariables {
+		if os.Getenv(envVar) == "" && defaultValueVariables[envVar] == "" {
+			log.Fatalf("%s environment variable is not set, exiting....", envVar)
+		}
+		if os.Getenv(envVar) == "" {
+			if os.Setenv(envVar, defaultValueVariables[envVar]) != nil {
+				log.Fatalf("could not set %s, exiting...", envVar)
+			}
+		}
+	}
+}
+
+func runRunnersConcurrently(runners []string, config types.ConfigFile, jsonBody types.JSONbody, decodyId string, w http.ResponseWriter, wg *sync.WaitGroup, previousScans []types.RunnerConfig, logger *logrus.Entry) {
 	for _, runnerName := range runners {
 		wg.Add(1)
 		go func(runnerName string) {
 			defer wg.Done()
 			runner := config.Runners[runnerName]
 
-			fromConfig, err := runScan(runner, jsonBody.Target, decodyId, config, nil)
+			fromConfig, err := runScan(runner, jsonBody.Target, decodyId, config, nil, previousScans, logger)
 			if err != nil {
-				log.Println(err)
+				logger.Error(err)
 				w.WriteHeader(http.StatusInternalServerError)
 				json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 				return
 			}
 
-			fmt.Println("runFromConfig: ", fromConfig)
+			logger.Info("runFromConfig: ", fromConfig)
 		}(runnerName)
 	}
 }
@@ -107,15 +167,19 @@ func checkIfAllEnvVarsAreSet() {
 }
 
 func getAndUnmarshalConfigFile(configFileName string) (types.ConfigFile, error) {
+	log.Debugf("Attempting to load %s", configFileName)
 	yamlFile, err := os.ReadFile(configFileName)
 	if err != nil {
 		return types.ConfigFile{}, fmt.Errorf("could not read %s read config error: %v", configFileName, err)
 	}
+	log.Debugf("Succesfully loaded %s", configFileName)
 
 	var config types.ConfigFile
+	log.Debugf("Attempting to unmarshall the config file")
 	if err := yaml.Unmarshal(yamlFile, &config); err != nil {
 		return types.ConfigFile{}, fmt.Errorf("failed to unmarshall the config, this is typically due to a malformed config Unmarshalling error: %v", err)
 	}
+	log.Debugf("Succesfully unmarshall the config file")
 
 	return config, nil
 }
@@ -124,7 +188,7 @@ func getAndUnmarshalConfigFile(configFileName string) (types.ConfigFile, error) 
 // if the scan has results that require subsequent scans, it runs the subsequent scans
 // it returns the output of the scan
 // it also protects against infinite recursion by keeping track of the scans that have been run and stopping if a scan has been run 3 times
-func runScan(rf types.RunnerConfig, t, decodyId string, cf types.ConfigFile, res []string) (string, error) {
+func runScan(rf types.RunnerConfig, t, decodyId string, cf types.ConfigFile, res []string, previousScans []types.RunnerConfig, logger *logrus.Entry) (string, error) {
 	replacedArgs := utils.ReplaceTemplateArgs(rf.CmdArgs, t, res)
 	if len(replacedArgs) == 1 {
 		rf.CmdArgs = replacedArgs[0]
@@ -139,7 +203,7 @@ func runScan(rf types.RunnerConfig, t, decodyId string, cf types.ConfigFile, res
 			go func(arg []string) {
 				defer wg.Done()
 				rf.CmdArgs = arg
-				result, err := runScan(rf, t, decodyId, cf, res)
+				result, err := runScan(rf, t, decodyId, cf, res, previousScans, logger)
 				mu.Lock()
 				defer mu.Unlock()
 				if err != nil {
@@ -157,30 +221,30 @@ func runScan(rf types.RunnerConfig, t, decodyId string, cf types.ConfigFile, res
 		return strings.Join(combinedResults, "\n"), nil
 	}
 
-	previousScans = append(previousScans, rf.ContainerName)
+	previousScans = append(previousScans, rf)
 
-	if utils.SubsequentOccurrences(rf.ContainerName, previousScans) > 3 {
+	if utils.SubsequentScanOccurrences(rf, previousScans) > 3 {
 		return "", fmt.Errorf("scan has a loop %s, exiting. This happens when a scan is run 3 times without one in the middle", rf.ContainerName)
 	}
 
-	fmt.Println("Running scan: ", rf.ContainerName)
-	fmt.Println("Args: ", rf.CmdArgs)
-	sr, err := runDockerService(rf, []string{}, []string{})
+	logger.Info("Running scan: ", rf.ContainerName)
+	logger.Info("Args: ", rf.CmdArgs)
+	sr, err := runDockerService(rf, []string{}, []string{}, logger)
 	if err != nil {
 		return "", err
 	}
 
-	pr := sendResultToParser(rf, sr)
+	pr := sendResultToParser(rf, sr, logger)
 
-	sendResultToDecody(pr, rf, decodyId)
+	sendResultToDecody(pr, rf, decodyId, logger)
 
-	runSubsequentScans(pr, rf, t, decodyId, cf)
+	runSubsequentScans(pr, rf, t, decodyId, cf, previousScans, logger)
 
 	return sr, nil
 }
 
 // this function kicks off a docker container with the given configuration and returns the output of the container
-func runDockerService(runConf types.RunnerConfig, volumes, env []string) (string, error) {
+func runDockerService(runConf types.RunnerConfig, volumes, env []string, logger *logrus.Entry) (string, error) {
 	fmt.Println("Running docker service: ", runConf.Image, ":", runConf.ImageVersion, " with args: ", runConf.CmdArgs)
 	configJSON := types.RunnerJSON{
 		ContainerName:    runConf.Image,
@@ -188,6 +252,7 @@ func runDockerService(runConf types.RunnerConfig, volumes, env []string) (string
 		ContainerCommand: runConf.CmdArgs,
 		Volumes:          volumes,
 		Env:              env,
+		Tty:              runConf.Tty,
 	}
 
 	jsonValue, err := json.Marshal(configJSON)
@@ -208,7 +273,7 @@ func runDockerService(runConf types.RunnerConfig, volumes, env []string) (string
 	return string(body), nil
 }
 
-func sendResultToParser(runConf types.RunnerConfig, containerOutput string) types.ParserOutputJson {
+func sendResultToParser(runConf types.RunnerConfig, containerOutput string, logger *logrus.Entry) types.ParserOutputJson {
 	// Clean the output of the container
 	containerOutput = utils.CleanControlCharacters(containerOutput)
 
@@ -216,7 +281,7 @@ func sendResultToParser(runConf types.RunnerConfig, containerOutput string) type
 		Image:        os.Getenv("PARSER_IMAGE"),
 		ImageVersion: os.Getenv("PARSER_VERSION"),
 		CmdArgs:      []string{runConf.ContainerName, runConf.ParserPlugin, containerOutput},
-	}, []string{os.Getenv("PARSERS_FOLDER") + ":/parsers"}, []string{"PARSER_FOLDER=/parsers"})
+	}, []string{os.Getenv("PARSERS_FOLDER") + ":/parsers"}, []string{"PARSER_FOLDER=/parsers"}, logger)
 	if err != nil {
 		return types.ParserOutputJson{}
 	}
@@ -226,8 +291,8 @@ func sendResultToParser(runConf types.RunnerConfig, containerOutput string) type
 	// parse the output of the parser
 	var pout types.ParserOutputJson
 	if err := json.Unmarshal([]byte(serviceOut), &pout); err != nil {
-		log.Println("Error unmarshalling parser output:", err)
-		log.Println("Parser output:", serviceOut)
+		logger.Error("Error unmarshalling parser output:", err)
+		logger.Error("Parser output:", serviceOut)
 		return types.ParserOutputJson{}
 	}
 
@@ -237,7 +302,7 @@ func sendResultToParser(runConf types.RunnerConfig, containerOutput string) type
 	}
 }
 
-func sendResultToDecody(parsedOutput types.ParserOutputJson, rf types.RunnerConfig, decodyId string) {
+func sendResultToDecody(parsedOutput types.ParserOutputJson, rf types.RunnerConfig, decodyId string, logger *logrus.Entry) {
 	if rf.Report == false || len(rf.DecodyRule) == 0 {
 		return
 	}
@@ -251,7 +316,7 @@ func sendResultToDecody(parsedOutput types.ParserOutputJson, rf types.RunnerConf
 	// marshal the results to send to decody
 	jsonData, err := json.Marshal(decodyInput)
 	if err != nil {
-		log.Println("Error marshalling decody input:", err)
+		logger.Errorln("Error marshalling decody input:", err)
 		return
 	}
 
@@ -260,16 +325,16 @@ func sendResultToDecody(parsedOutput types.ParserOutputJson, rf types.RunnerConf
 	// send the results to decody
 	res, err := http.Post(os.Getenv("DECODY_SERVICE")+"/load/"+decodyId, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		log.Println("Error sending results to decody:", err)
+		logger.Errorln("Error sending results to decody:", err)
 	}
 
 	// read the response from decody
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		log.Println("Error reading response from decody:", err)
+		logger.Errorln("Error reading response from decody:", err)
 	}
 
-	fmt.Println("Decody response: ", string(body))
+	logger.Debug("Decody response: ", string(body))
 }
 
 // generateDecodyId makes a new unique identifier for the scan to send to decody based on the target and the current time
@@ -286,7 +351,7 @@ func generateDecodyId(target string) string {
 
 // runSubsequentScans runs scans if the initials scans have vulnerabilities that require subsequent scans
 // it runs the scans that are in the results map of the runner config
-func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t, decodyId string, cf types.ConfigFile) {
+func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t, decodyId string, cf types.ConfigFile, previousScans []types.RunnerConfig, logger *logrus.Entry) {
 	scansToRun := findScansToRun(pout, rc, cf)
 
 	if scansToRun == nil {
@@ -299,7 +364,7 @@ func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t, d
 		wg.Add(1)
 		go func(result types.RunnerConfig) {
 			defer wg.Done()
-			runScan(result, t, decodyId, cf, pout.Results[0].PassRes)
+			runScan(result, t, decodyId, cf, pout.Results[0].PassRes, previousScans, logger)
 		}(result)
 	}
 
