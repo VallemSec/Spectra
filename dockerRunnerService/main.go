@@ -18,6 +18,12 @@ func main() {
 			ContainerCommand []string `json:"containerCommand"`
 			Volume           []string `json:"volume"`
 			Env              []string `json:"env"`
+			Tty              bool     `json:"tty"`
+		}
+
+		type returnBody struct {
+			Stdout []string `json:"stdout"`
+			Stderr []string `json:"stderr"`
 		}
 
 		// decode the request body into reqBody
@@ -32,8 +38,9 @@ func main() {
 		containerCommand := reqBody.ContainerCommand
 		volumes := reqBody.Volume
 		env := reqBody.Env
+		tty := reqBody.Tty
 
-		out, err := docker.CreateContainer(containerName, containerTag, containerCommand, volumes, env)
+		stdout, stderr, err := docker.CreateContainer(containerName, containerTag, containerCommand, volumes, env, tty)
 		// log the error if there is any
 		if err != nil {
 			log.Println(err)
@@ -45,12 +52,17 @@ func main() {
 			return
 		}
 
-		ansi.Strip(out)
-		lines := strings.Split(out, "\n")
+		ansi.Strip(stdout)
+		stdoutLines := strings.Split(stdout, "\n")
+		stderrLines := strings.Split(stderr, "\n")
+		//rBody := returnBody{stdout: stdoutLines, stderr: stderrLines}
+		rBody := new(returnBody)
+		rBody.Stdout = stdoutLines
+		rBody.Stderr = stderrLines
 
 		// return the output of the container as the response in JSON format
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(lines)
+		json.NewEncoder(w).Encode(rBody)
 	})
 
 	err := http.ListenAndServe(":8080", nil)
