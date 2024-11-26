@@ -12,20 +12,20 @@ import (
 	"os"
 )
 
-func CreateContainer(containerName, containerTag string, containerCommand, volumes, env []string) (string, error) {
+func CreateContainer(containerName, containerTag string, containerCommand, volumes, env []string, tty bool) (string, string, error) {
 	fmt.Println("Creating container", containerName+":"+containerTag)
 
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer cli.Close()
 
 	imageName := containerName + ":" + containerTag
 	imageFound, err := CheckLocalImg(ctx, cli, imageName)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	fmt.Println("Image found: ", imageFound, imageName)
@@ -35,29 +35,39 @@ func CreateContainer(containerName, containerTag string, containerCommand, volum
 		fmt.Println("Pulling image", imageName)
 		reader, err := cli.ImagePull(ctx, "docker.io/"+imageName, image.PullOptions{})
 		if err != nil {
-			return "", fmt.Errorf("failed to pull image: %w", err)
+			return "", "", fmt.Errorf("failed to pull image: %w", err)
 		}
 		defer reader.Close()
 		io.Copy(os.Stdout, reader)
 	}
 
-	out, containerId, err := StartAndReadLogs(ctx, cli, imageName, containerCommand, volumes, env)
+	stdoutBuff, stderrBuff, containerId, err := StartAndReadLogs(ctx, cli, imageName, containerCommand, volumes, env, tty)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	if out == nil {
-		return "", fmt.Errorf("failed to get logs from container")
+	if stdoutBuff == nil {
+		return "", "", fmt.Errorf("failed to get logs from container")
 	}
 
-	var output string
-	scanner := bufio.NewScanner(out)
-	for scanner.Scan() {
-		line := scanner.Text()
-		output += line + "\n"
+	var stdout string
+	stdoutScanner := bufio.NewScanner(stdoutBuff)
+	for stdoutScanner.Scan() {
+		line := stdoutScanner.Text()
+		stdout += line + "\n"
 	}
-	if err := scanner.Err(); err != nil {
-		return "", err
+	if err := stdoutScanner.Err(); err != nil {
+		return "", "", err
+	}
+
+	var stderr string
+	stderrScanner := bufio.NewScanner(stderrBuff)
+	for stderrScanner.Scan() {
+		line := stderrScanner.Text()
+		stderr += line + "\n"
+	}
+	if err := stderrScanner.Err(); err != nil {
+		return "", "", err
 	}
 
 	// Remove the container in the background
@@ -67,5 +77,5 @@ func CreateContainer(containerName, containerTag string, containerCommand, volum
 		}
 	}()
 
-	return output, nil
+	return stdout, stderr, nil
 }

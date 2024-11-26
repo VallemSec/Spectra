@@ -29,7 +29,6 @@ func main() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		var jsonBody types.JSONbody
-		var previousScans []types.RunnerConfig
 
 		// TODO: Read the config once and make copies when replacing args in runScan DO NOT MODIFY THE CONFIG ONCE IT IS READ
 		config, err := getAndUnmarshalConfigFile(os.Getenv("CONFIG_FILE_PATH"))
@@ -48,10 +47,10 @@ func main() {
 		var wg sync.WaitGroup
 
 		// Run DiscoveryRunners concurrently
-		runRunnersConcurrently(config.DiscoveryRunners, config, jsonBody, decodyId, w, &wg, previousScans)
+		runRunnersConcurrently(config.DiscoveryRunners, config, jsonBody, decodyId, w, &wg)
 
 		// Run AlwaysRun concurrently
-		runRunnersConcurrently(config.AlwaysRun, config, jsonBody, decodyId, w, &wg, previousScans)
+		runRunnersConcurrently(config.AlwaysRun, config, jsonBody, decodyId, w, &wg)
 
 		// Wait for all scans to complete
 		wg.Wait()
@@ -69,6 +68,7 @@ func main() {
 		io.Copy(w, resp.Body)
 
 		fmt.Println("Finished running all scans")
+
 	})
 
 	if err := http.ListenAndServe(":8080", nil); err != nil {
@@ -76,14 +76,14 @@ func main() {
 	}
 }
 
-func runRunnersConcurrently(runners []string, config types.ConfigFile, jsonBody types.JSONbody, decodyId string, w http.ResponseWriter, wg *sync.WaitGroup, previousScans []types.RunnerConfig) {
+func runRunnersConcurrently(runners []string, config types.ConfigFile, jsonBody types.JSONbody, decodyId string, w http.ResponseWriter, wg *sync.WaitGroup) {
 	for _, runnerName := range runners {
 		wg.Add(1)
 		go func(runnerName string) {
 			defer wg.Done()
 			runner := config.Runners[runnerName]
 
-			fromConfig, err := runScan(runner, jsonBody.Target, decodyId, config, nil, previousScans)
+			fromConfig, err := runScan(runner, jsonBody.Target, decodyId, config, nil)
 			if err != nil {
 				log.Println(err)
 				w.WriteHeader(http.StatusInternalServerError)
@@ -124,7 +124,7 @@ func getAndUnmarshalConfigFile(configFileName string) (types.ConfigFile, error) 
 // if the scan has results that require subsequent scans, it runs the subsequent scans
 // it returns the output of the scan
 // it also protects against infinite recursion by keeping track of the scans that have been run and stopping if a scan has been run 3 times
-func runScan(rf types.RunnerConfig, t, decodyId string, cf types.ConfigFile, res []string, previousScans []types.RunnerConfig) (string, error) {
+func runScan(rf types.RunnerConfig, t, decodyId string, cf types.ConfigFile, res []string) (string, error) {
 	replacedArgs := utils.ReplaceTemplateArgs(rf.CmdArgs, t, res)
 	if len(replacedArgs) == 1 {
 		rf.CmdArgs = replacedArgs[0]
@@ -139,7 +139,7 @@ func runScan(rf types.RunnerConfig, t, decodyId string, cf types.ConfigFile, res
 			go func(arg []string) {
 				defer wg.Done()
 				rf.CmdArgs = arg
-				result, err := runScan(rf, t, decodyId, cf, res, previousScans)
+				result, err := runScan(rf, t, decodyId, cf, res)
 				mu.Lock()
 				defer mu.Unlock()
 				if err != nil {
@@ -157,9 +157,9 @@ func runScan(rf types.RunnerConfig, t, decodyId string, cf types.ConfigFile, res
 		return strings.Join(combinedResults, "\n"), nil
 	}
 
-	previousScans = append(previousScans, rf)
+	previousScans = append(previousScans, rf.ContainerName)
 
-	if utils.SubsequentScanOccurrences(rf, previousScans) > 3 {
+	if utils.SubsequentOccurrences(rf.ContainerName, previousScans) > 3 {
 		return "", fmt.Errorf("scan has a loop %s, exiting. This happens when a scan is run 3 times without one in the middle", rf.ContainerName)
 	}
 
@@ -174,7 +174,7 @@ func runScan(rf types.RunnerConfig, t, decodyId string, cf types.ConfigFile, res
 
 	sendResultToDecody(pr, rf, decodyId)
 
-	runSubsequentScans(pr, rf, t, decodyId, cf, previousScans)
+	runSubsequentScans(pr, rf, t, decodyId, cf)
 
 	return sr, nil
 }
@@ -286,7 +286,7 @@ func generateDecodyId(target string) string {
 
 // runSubsequentScans runs scans if the initials scans have vulnerabilities that require subsequent scans
 // it runs the scans that are in the results map of the runner config
-func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t, decodyId string, cf types.ConfigFile, previousScans []types.RunnerConfig) {
+func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t, decodyId string, cf types.ConfigFile) {
 	scansToRun := findScansToRun(pout, rc, cf)
 
 	if scansToRun == nil {
@@ -299,7 +299,7 @@ func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t, d
 		wg.Add(1)
 		go func(result types.RunnerConfig) {
 			defer wg.Done()
-			runScan(result, t, decodyId, cf, pout.Results[0].PassRes, previousScans)
+			runScan(result, t, decodyId, cf, pout.Results[0].PassRes)
 		}(result)
 	}
 
