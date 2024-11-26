@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.scss">
+    <script src="env.js" type="module"></script>
+    <script src="script.js" defer></script>
+    <title>Spectra</title>
+</head>
+    <body>
+        <header class="bg-blue-400">
+            <h1 class="text-5xl py-8 px-5">
+                Spectra
+            </h1>
+        </header>
+        <section class="pt-16 max-w-[850px] mx-auto">
+            <h2 class="text-3xl pb-3">
+                Input:
+            </h2>
+            <form action="" id="form" method="post">
+                <label for="domain">Domain:</label>
+                <input class="border-1 border border-black p-1" type="text" id="domain" name="domain" required>
+                <input type="submit" value="Submit">
+            </form>
+            <div id="output"></div>
+        </section>
+    </body>
+</html>

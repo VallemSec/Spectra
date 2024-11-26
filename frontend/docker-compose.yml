@@ -1,0 +1,7 @@
+services:
+    webserver:
+        image: nginx:1.27.2
+        ports:
+            - 8080:80
+        volumes:
+            - ./dist:/usr/share/nginx/html
