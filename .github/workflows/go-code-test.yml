@@ -27,4 +27,7 @@ jobs:
 # Test all folders with Go code
     - name: Test
       run: |
-        find . -name 'go.mod' -execdir go test ./... \;
+        set -e
+        for mod in $(find . -name 'go.mod' -exec dirname {} \;); do
+          (cd $mod && go test -v ./...)
+        done
