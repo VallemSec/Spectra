@@ -186,6 +186,7 @@ func getAndUnmarshalConfigFile(confPath string) (types.ConfigFile, error) {
 // if the scan has results that require subsequent scans, it runs the subsequent scans
 // it returns the output of the scan
 // it also protects against infinite recursion by keeping track of the scans that have been run and stopping if a scan has been run 3 times
+// t is the target of the scan
 func runScan(rf types.RunnerConfig, t, decodyId string, cf types.ConfigFile, res []string, prevScans []types.RunnerConfig, logger *logrus.Entry) (string, error) {
 	replacedArgs := utils.ReplaceTemplateArgs(rf.CmdArgs, t, res)
 	if len(replacedArgs) == 1 {
