@@ -13,6 +13,7 @@ import (
 // {{[pass_results]}} will return an array of args to run multiple scans with the results.
 func ReplaceTemplateArgs(args []string, t string, res []string) [][]string {
 	willPassAmount := len(res)
+	willRunMultipleScans := false
 
 	// replace the target in the command arguments
 	for i, arg := range args {
@@ -24,11 +25,12 @@ func ReplaceTemplateArgs(args []string, t string, res []string) [][]string {
 		}
 		if arg == "{{[pass_results]}}" {
 			args[i] = ""
+			willRunMultipleScans = true
 		}
 	}
 
 	// if there are multiple results, create multiple command arguments
-	if willPassAmount > 1 {
+	if willPassAmount > 1 && willRunMultipleScans {
 		var wg sync.WaitGroup
 		newArgs := make([][]string, willPassAmount)
 		for i := 0; i < willPassAmount; i++ {
