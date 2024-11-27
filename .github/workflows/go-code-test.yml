@@ -34,7 +34,7 @@ jobs:
 
     - name: Build
       run: |
-        find . -name 'go.mod' -execdir go build -v ./...
+        find . -name 'go.mod' -execdir go build -v ./... \;
 
     - name: Test
       run: |
