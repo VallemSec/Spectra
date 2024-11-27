@@ -49,8 +49,6 @@ func init() {
 }
 
 func main() {
-	checkIfAllEnvVarsAreSet()
-
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		var jsonBody types.JSONbody
 		var previousScans []types.RunnerConfig
@@ -245,7 +243,7 @@ func runScan(rf types.RunnerConfig, t, decodyId string, cf types.ConfigFile, res
 
 // this function kicks off a docker container with the given configuration and returns the output of the container
 func runDockerService(runConf types.RunnerConfig, volumes, env []string, logger *logrus.Entry) (string, error) {
-	fmt.Println("Running docker service: ", runConf.Image, ":", runConf.ImageVersion, " with args: ", runConf.CmdArgs)
+	logger.Info("Running docker service: ", runConf.Image, ":", runConf.ImageVersion, " with args: ", runConf.CmdArgs)
 	configJSON := types.RunnerJSON{
 		ContainerName:    runConf.Image,
 		ContainerTag:     runConf.ImageVersion,
@@ -320,10 +318,11 @@ func sendResultToDecody(parsedOutput types.ParserOutputJson, rf types.RunnerConf
 		return
 	}
 
-	fmt.Println(os.Getenv("DECODY_SERVICE") + "/load/" + decodyId)
+	decodyUrl := os.Getenv("DECODY_SERVICE") + "/load/" + decodyId
+	logger.Debugln("Decody load url:", decodyUrl)
 
 	// send the results to decody
-	res, err := http.Post(os.Getenv("DECODY_SERVICE")+"/load/"+decodyId, "application/json", bytes.NewBuffer(jsonData))
+	res, err := http.Post(decodyUrl, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		logger.Errorln("Error sending results to decody:", err)
 	}

@@ -97,7 +97,7 @@ func SubsequentScanOccurrences(rc types.RunnerConfig, slice []types.RunnerConfig
 	maxCount := 0
 	currentCount := 0
 	for _, item := range slice {
-		if runnerConfigEqual(item, rc) {
+		if runnerConfigEqualish(item, rc) {
 			currentCount++
 			if currentCount > maxCount {
 				maxCount = currentCount
@@ -109,9 +109,9 @@ func SubsequentScanOccurrences(rc types.RunnerConfig, slice []types.RunnerConfig
 	return currentCount
 }
 
-// runnerConfigEqual compares two runner configs and returns true if they are exactly the same
+// runnerConfigEqualish compares two runner configs and returns true if they are nearly the same
 // for this we compare the name, container image, and the cmd args given to the container
-func runnerConfigEqual(a, b types.RunnerConfig) bool {
+func runnerConfigEqualish(a, b types.RunnerConfig) bool {
 	strikes := 0
 
 	// Compare the name, container image
