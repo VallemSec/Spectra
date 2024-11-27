@@ -20,7 +20,9 @@ jobs:
         go-version: '1.23.x'
 
     - name: Build
-      run: go build -v ./...
+      run: |
+        find . -name 'go.mod' -execdir go build -v ./... \;
+
 
 # Test all folders with Go code
     - name: Test
