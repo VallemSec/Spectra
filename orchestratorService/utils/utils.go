@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"main/types"
 	"regexp"
 	"strings"
 	"sync"
@@ -90,21 +91,13 @@ func NormalizeTarget(target string) (string, error) {
 	return target, nil
 }
 
-func OccurrencesInSlice(s string, slice []string) int {
-	count := 0
-	for _, item := range slice {
-		if item == s {
-			count++
-		}
-	}
-	return count
-}
-
-func SubsequentOccurrences(s string, slice []string) int {
+// SubsequentScanOccurrences counts the number of times a runner config appears in a slice of runner configs.
+// please only use this function after replacing the template arguments in the runner config
+func SubsequentScanOccurrences(rc types.RunnerConfig, slice []types.RunnerConfig) int {
 	maxCount := 0
 	currentCount := 0
 	for _, item := range slice {
-		if item == s {
+		if runnerConfigEqualish(item, rc) {
 			currentCount++
 			if currentCount > maxCount {
 				maxCount = currentCount
@@ -113,7 +106,37 @@ func SubsequentOccurrences(s string, slice []string) int {
 			currentCount = 0
 		}
 	}
-	return maxCount
+	return currentCount
+}
+
+// runnerConfigEqualish compares two runner configs and returns true if they are nearly the same
+// for this we compare the name, container image, and the cmd args given to the container
+func runnerConfigEqualish(a, b types.RunnerConfig) bool {
+	strikes := 0
+
+	// Compare the name, container image
+	if len(a.ContainerName) != len(b.ContainerName) {
+		strikes++
+	}
+	if len(a.Image) != len(b.Image) {
+		strikes++
+	}
+
+	// compare the configs
+	if len(a.CmdArgs) != len(b.CmdArgs) {
+		for i := range a.CmdArgs {
+			if a.CmdArgs[i] != b.CmdArgs[i] {
+				strikes++
+				break
+			}
+		}
+	}
+
+	if strikes >= 3 {
+		return false
+	}
+
+	return true
 }
 
 func CleanParserOutput(input string) string {

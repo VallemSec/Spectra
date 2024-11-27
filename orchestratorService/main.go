@@ -20,7 +20,6 @@ import (
 	"main/utils"
 )
 
-var previousScans []string
 var globalConfig types.ConfigFile
 var log = logrus.New()
 
@@ -52,8 +51,11 @@ func init() {
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		var jsonBody types.JSONbody
+		var prevScans []types.RunnerConfig
 
 		err := json.NewDecoder(r.Body).Decode(&jsonBody)
+
+		err = json.NewDecoder(r.Body).Decode(&jsonBody)
 		jsonBody.Target, err = utils.NormalizeTarget(jsonBody.Target)
 		if err != nil {
 			log.Error(err)
@@ -71,10 +73,10 @@ func main() {
 		requestLogger.Trace("Created copy of the config")
 
 		// Run DiscoveryRunners concurrently
-		runRunnersConcurrently(config.DiscoveryRunners, config, jsonBody, decodyId, w, &wg, requestLogger)
+		runRunnersConcurrently(config.DiscoveryRunners, config, jsonBody, decodyId, w, &wg, prevScans, requestLogger)
 
 		// Run AlwaysRun concurrently
-		runRunnersConcurrently(config.AlwaysRun, config, jsonBody, decodyId, w, &wg, requestLogger)
+		runRunnersConcurrently(config.AlwaysRun, config, jsonBody, decodyId, w, &wg, prevScans, requestLogger)
 
 		// Wait for all scans to complete
 		wg.Wait()
@@ -92,31 +94,10 @@ func main() {
 		io.Copy(w, resp.Body)
 
 		requestLogger.Info("Finished running all scans")
-
 	})
 
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatal(err)
-	}
-}
-
-func runRunnersConcurrently(runners []string, config types.ConfigFile, jsonBody types.JSONbody, decodyId string, w http.ResponseWriter, wg *sync.WaitGroup, logger *logrus.Entry) {
-	for _, runnerName := range runners {
-		wg.Add(1)
-		go func(runnerName string) {
-			defer wg.Done()
-			runner := config.Runners[runnerName]
-
-			fromConfig, err := runScan(runner, jsonBody.Target, decodyId, config, nil, logger)
-			if err != nil {
-				logger.Error(err)
-				w.WriteHeader(http.StatusInternalServerError)
-				json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-				return
-			}
-
-			logger.Info("runFromConfig: ", fromConfig)
-		}(runnerName)
 	}
 }
 
@@ -153,13 +134,43 @@ func enforceEnvVars() {
 	}
 }
 
-func getAndUnmarshalConfigFile(configFileName string) (types.ConfigFile, error) {
-	log.Debugf("Attempting to load %s", configFileName)
-	yamlFile, err := os.ReadFile(configFileName)
-	if err != nil {
-		return types.ConfigFile{}, fmt.Errorf("could not read %s read config error: %v", configFileName, err)
+func runRunnersConcurrently(runners []string, config types.ConfigFile, jsonBody types.JSONbody, decodyId string, w http.ResponseWriter, wg *sync.WaitGroup, prevScans []types.RunnerConfig, logger *logrus.Entry) {
+	for _, runnerName := range runners {
+		wg.Add(1)
+		go func(runnerName string) {
+			defer wg.Done()
+			runner := config.Runners[runnerName]
+
+			fromConfig, err := runScan(runner, jsonBody.Target, decodyId, config, nil, prevScans, logger)
+			if err != nil {
+				logger.Error(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+				return
+			}
+
+			logger.Info("runFromConfig: ", fromConfig)
+		}(runnerName)
 	}
-	log.Debugf("Succesfully loaded %s", configFileName)
+}
+
+func checkIfAllEnvVarsAreSet() {
+	envVariables := []string{"DOCKER_RUNNER_SERVICE", "CONFIG_FILE_PATH", "PARSERS_FOLDER", "PARSER_IMAGE", "PARSER_VERSION", "DECODY_SERVICE"}
+
+	for _, envVar := range envVariables {
+		if os.Getenv(envVar) == "" {
+			log.Fatalf("%s environment variable is not set, exiting....", envVar)
+		}
+	}
+}
+
+func getAndUnmarshalConfigFile(confPath string) (types.ConfigFile, error) {
+	log.Debugf("Attempting to load %s", confPath)
+	yamlFile, err := os.ReadFile(confPath)
+	if err != nil {
+		return types.ConfigFile{}, fmt.Errorf("could not read %s read config error: %v", confPath, err)
+	}
+	log.Debugf("Succesfully loaded %s", confPath)
 
 	var config types.ConfigFile
 	log.Debugf("Attempting to unmarshall the config file")
@@ -175,8 +186,9 @@ func getAndUnmarshalConfigFile(configFileName string) (types.ConfigFile, error) 
 // if the scan has results that require subsequent scans, it runs the subsequent scans
 // it returns the output of the scan
 // it also protects against infinite recursion by keeping track of the scans that have been run and stopping if a scan has been run 3 times
-func runScan(rf types.RunnerConfig, target string, decodyId string, cf types.ConfigFile, res []string, logger *logrus.Entry) (string, error) {
-	replacedArgs := utils.ReplaceTemplateArgs(rf.CmdArgs, target, res)
+// t is the target of the scan
+func runScan(rf types.RunnerConfig, t, decodyId string, cf types.ConfigFile, res []string, prevScans []types.RunnerConfig, logger *logrus.Entry) (string, error) {
+	replacedArgs := utils.ReplaceTemplateArgs(rf.CmdArgs, t, res)
 	if len(replacedArgs) == 1 {
 		rf.CmdArgs = replacedArgs[0]
 	} else {
@@ -190,7 +202,7 @@ func runScan(rf types.RunnerConfig, target string, decodyId string, cf types.Con
 			go func(arg []string) {
 				defer wg.Done()
 				rf.CmdArgs = arg
-				result, err := runScan(rf, target, decodyId, cf, res, logger)
+				result, err := runScan(rf, t, decodyId, cf, res, prevScans, logger)
 				mu.Lock()
 				defer mu.Unlock()
 				if err != nil {
@@ -208,9 +220,9 @@ func runScan(rf types.RunnerConfig, target string, decodyId string, cf types.Con
 		return strings.Join(combinedResults, "\n"), nil
 	}
 
-	previousScans = append(previousScans, rf.ContainerName)
+	prevScans = append(prevScans, rf)
 
-	if utils.SubsequentOccurrences(rf.ContainerName, previousScans) > 3 {
+	if utils.SubsequentScanOccurrences(rf, prevScans) > 3 {
 		return "", fmt.Errorf("scan has a loop %s, exiting. This happens when a scan is run 3 times without one in the middle", rf.ContainerName)
 	}
 
@@ -225,7 +237,7 @@ func runScan(rf types.RunnerConfig, target string, decodyId string, cf types.Con
 
 	sendResultToDecody(pr, rf, decodyId, logger)
 
-	runSubsequentScans(pr, rf, target, decodyId, cf, logger)
+	runSubsequentScans(pr, rf, t, decodyId, cf, prevScans, logger)
 
 	return sr, nil
 }
@@ -268,7 +280,6 @@ func sendResultToParser(runConf types.RunnerConfig, containerOutput string, logg
 		Image:        os.Getenv("PARSER_IMAGE"),
 		ImageVersion: os.Getenv("PARSER_VERSION"),
 		CmdArgs:      []string{runConf.ContainerName, runConf.ParserPlugin, containerOutput},
-		Tty:          false,
 	}, []string{os.Getenv("PARSERS_FOLDER") + ":/parsers"}, []string{"PARSER_FOLDER=/parsers"}, logger)
 	if err != nil {
 		return types.ParserOutputJson{}
@@ -290,7 +301,7 @@ func sendResultToParser(runConf types.RunnerConfig, containerOutput string, logg
 	}
 }
 
-func sendResultToDecody(parsedOutput types.ParserOutputJson, rf types.RunnerConfig, decodyId string, logger *logrus.Entry) {
+func sendResultToDecody(pout types.ParserOutputJson, rf types.RunnerConfig, decodyId string, logger *logrus.Entry) {
 	if rf.Report == false || len(rf.DecodyRule) == 0 {
 		return
 	}
@@ -298,7 +309,7 @@ func sendResultToDecody(parsedOutput types.ParserOutputJson, rf types.RunnerConf
 	decodyInput := types.DecodyInput{
 		Name:    rf.ContainerName,
 		Rules:   rf.DecodyRule,
-		Results: parsedOutput.Results,
+		Results: pout.Results,
 	}
 
 	// marshal the results to send to decody
@@ -340,7 +351,7 @@ func generateDecodyId(target string) string {
 
 // runSubsequentScans runs scans if the initials scans have vulnerabilities that require subsequent scans
 // it runs the scans that are in the results map of the runner config
-func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t, decodyId string, cf types.ConfigFile, logger *logrus.Entry) {
+func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t, decodyId string, cf types.ConfigFile, prevScans []types.RunnerConfig, logger *logrus.Entry) {
 	scansToRun := findScansToRun(pout, rc, cf)
 
 	if scansToRun == nil {
@@ -353,7 +364,7 @@ func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t, d
 		wg.Add(1)
 		go func(result types.RunnerConfig) {
 			defer wg.Done()
-			runScan(result, t, decodyId, cf, pout.Results[0].PassRes, logger)
+			runScan(result, t, decodyId, cf, pout.Results[0].PassRes, prevScans, logger)
 		}(result)
 	}
 
