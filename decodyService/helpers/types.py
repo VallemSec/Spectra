@@ -6,7 +6,7 @@ class ResultObjectFormat(TypedDict):
     long: str
 
 class LoadEndpointInputFormat(TypedDict):
-    name: str
+    scanner_name: str
     rules: list[str]
     results: list[ResultObjectFormat]
 
@@ -19,10 +19,15 @@ class DecodyDatabaseRuleFormat(TypedDict):
 
 class DecodyOutputResultFormat(TypedDict):
     category: str
-    name: str
-    description: str
+    rule_name: str
+    rule_explanation: str
+    scanner_name: str
+
+class DecodyCategoryOutputFormat(TypedDict):
+    category: str
     ai_advice: str
+    results: list[DecodyOutputResultFormat]
 
 class DecodyOutputFormat(TypedDict):
-    advice: str
-    results: list[DecodyOutputResultFormat]
+    ai_advice: str
+    results: dict[str, DecodyCategoryOutputFormat]
