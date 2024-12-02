@@ -14,6 +14,7 @@ services:
       - caddy_data:/data
       - caddy_config:/config
       - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./frontend/dist:/fe
 
   mariadb:
     image: mariadb:lts-ubi9
