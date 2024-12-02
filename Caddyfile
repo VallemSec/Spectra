@@ -1,3 +1,7 @@
 {$DOMAIN} {
+	file_server /ui {
+		root /fe
+		pass_thru
+	}
 	reverse_proxy orchestrator:8080
 }
