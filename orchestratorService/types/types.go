@@ -82,7 +82,7 @@ type RunnerJSON struct {
 }
 
 type DecodyInput struct {
-	Name    string   `json:"name"`
+	Name    string   `json:"scanner_name"`
 	Rules   []string `json:"rules"`
 	Results []Result `json:"results"`
 }

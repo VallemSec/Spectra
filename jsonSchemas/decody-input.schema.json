@@ -3,7 +3,7 @@
     "title": "Decody-input",
     "type": "object",
     "properties": {
-      "name": {
+      "scanner_name": {
         "type": "string"
       },
       "rules": {
@@ -24,9 +24,9 @@
               "type": "string"
             }
           },
-          "required": ["short"]
+          "required": ["short", "long"]
         }
       }
     },
-    "required": ["name", "rules", "results"]
+    "required": ["scanner_name", "rules", "results"]
   }
