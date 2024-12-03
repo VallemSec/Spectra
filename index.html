@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <title>Spectra</title>
+</head>
+<body>
+    <header class="w3-blue w3-container">
+        <h1 class="w3-text-black">
+            Spectra
+        </h1>
+    </header>
+    <section class="w3-container">
+        <h2>
+            Input:
+        </h2>
+        <label for="domain">Domain:</label>
+        <input class="" type="text" id="domain" name="domain" required>
+        <input type="button" value="Submit" onclick="loadresults()">
+        <div id="output"></div>
+    </section>
+    <script lang="js">
+        function loadresults() {
+            let domain = document.getElementById("domain").value;
+            let output = document.getElementById("output");
+
+            const headers = new Headers();
+            headers.append("Content-Type", "application/json");
+            const requestOptions = {
+                method: "POST",
+                headers: headers,
+                body: JSON.stringify({target: domain}),
+                redirect: "follow"
+            };
+            fetch("/", requestOptions)
+            .then((response) => response.text())
+            .then((result) => {
+                output.innerHTML = result;
+            })
+            .catch((error) => console.error(error));
+        }
+    </script>
+</body>
+</html>
