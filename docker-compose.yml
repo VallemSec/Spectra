@@ -2,6 +2,7 @@ volumes:
   mariadb_volume:
   caddy_data:
   caddy_config:
+  wikidocs_datasets:
 
 services:
   caddy:
@@ -55,3 +56,12 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+
+  wikidocs:
+    image: zavy86/wikidocs
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - wikidocs_datasets:/datasets

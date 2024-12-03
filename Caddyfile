@@ -5,3 +5,7 @@
 	}
 	reverse_proxy orchestrator:8080
 }
+
+docs.{$DOMAIN} {
+	reverse_proxy wikidocs:80
+}
