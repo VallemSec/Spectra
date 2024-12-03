@@ -21,10 +21,13 @@ logging.basicConfig(
 )
 
 db_logger = logging.getLogger("db_appcontext")
+app_logger = logging.getLogger("app")
 
 app = Flask(__name__)
 app.register_blueprint(endpoints.load_app)
+app_logger.debug("Loaded /load endpoint")
 app.register_blueprint(endpoints.generate_app)
+app_logger.debug("Loaded /generate endpoint")
 
 
 @app.before_request
