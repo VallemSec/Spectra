@@ -1,7 +1,7 @@
 {$DOMAIN} {
-	file_server /ui {
-		root /fe
-		pass_thru
+	handle_path /ui/* {
+		root * /fe
+		file_server
 	}
 	reverse_proxy orchestrator:8080
 }
