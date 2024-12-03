@@ -7,11 +7,10 @@ services:
   caddy:
     image: caddy:2.8.4
     restart: unless-stopped
+    env_file: .env
     ports:
       - 80:80
       - 443:443
-    environment:
-      DOMAIN: ${DOMAIN}
     volumes:
       - caddy_data:/data
       - caddy_config:/config
@@ -21,9 +20,9 @@ services:
   mariadb:
     image: mariadb:lts-ubi9
     restart: unless-stopped
-    env_file: .env
     environment:
       MARIADB_DATABASE: spectra
+      MARIADB_ROOT_PASSWORD: password
     volumes: 
       - ./sqlScripts:/docker-entrypoint-initdb.d
       - mariadb_volume:/var/lib/mysql
@@ -44,9 +43,10 @@ services:
   decody:
     image: ghcr.io/vallemsec/spectra/decody
     restart: unless-stopped
-    env_file: .env
     environment:
       MARIADB_DATABASE: spectra
+      MARIADB_HOST: mariadb
+      MARIADB_PASSWORD: password
     volumes:
       - ./jsonSchemas:/schemas
 
