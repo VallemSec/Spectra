@@ -2,16 +2,16 @@ volumes:
   mariadb_volume:
   caddy_data:
   caddy_config:
+  wikidocs_datasets:
 
 services:
   caddy:
     image: caddy:2.8.4
     restart: unless-stopped
+    env_file: .env
     ports:
       - 80:80
       - 443:443
-    environment:
-      DOMAIN: ${DOMAIN}
     volumes:
       - caddy_data:/data
       - caddy_config:/config
@@ -21,9 +21,9 @@ services:
   mariadb:
     image: mariadb:lts-ubi9
     restart: unless-stopped
-    env_file: .env
     environment:
       MARIADB_DATABASE: spectra
+      MARIADB_ROOT_PASSWORD: password
     volumes: 
       - ./sqlScripts:/docker-entrypoint-initdb.d
       - mariadb_volume:/var/lib/mysql
@@ -31,13 +31,7 @@ services:
   orchestrator:
     image: ghcr.io/vallemsec/spectra/orchestrator
     restart: unless-stopped
-    environment:
-      CONFIG_FILE_PATH: /app/config.yaml
-      DOCKER_RUNNER_SERVICE: http://dockerrunner:8080
-      PARSERS_FOLDER: /home/manager/SpectraConfig/parsers
-      PARSER_IMAGE: ghcr.io/vallemsec/spectra/parser
-      PARSER_IMAGE_TAG: latest
-      DECODY_SERVICE: http://decody:5001
+    env_file: .env
     volumes:
       - ./orchestrator-config.yaml:/app/config.yaml
 
@@ -47,6 +41,8 @@ services:
     env_file: .env
     environment:
       MARIADB_DATABASE: spectra
+      MARIADB_HOST: mariadb
+      MARIADB_PASSWORD: password
     volumes:
       - ./jsonSchemas:/schemas
 
@@ -55,3 +51,12 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+
+  wikidocs:
+    image: zavy86/wikidocs
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - wikidocs_datasets:/datasets
