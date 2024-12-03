@@ -31,19 +31,14 @@ services:
   orchestrator:
     image: ghcr.io/vallemsec/spectra/orchestrator
     restart: unless-stopped
-    environment:
-      CONFIG_FILE_PATH: /app/config.yaml
-      DOCKER_RUNNER_SERVICE: http://dockerrunner:8080
-      PARSERS_FOLDER: /home/manager/SpectraConfig/parsers
-      PARSER_IMAGE: ghcr.io/vallemsec/spectra/parser
-      PARSER_IMAGE_TAG: latest
-      DECODY_SERVICE: http://decody:5001
+    env_file: .env
     volumes:
       - ./orchestrator-config.yaml:/app/config.yaml
 
   decody:
     image: ghcr.io/vallemsec/spectra/decody
     restart: unless-stopped
+    env_file: .env
     environment:
       MARIADB_DATABASE: spectra
       MARIADB_HOST: mariadb
