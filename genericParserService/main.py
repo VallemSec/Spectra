@@ -61,7 +61,7 @@ for thread in lua_parser_threads:
     if panicked:
         panicked_files.append(thread["parser"].parser_file)
     elif result:
-        results.append(result)
+        results += result
 
 if len(panicked_files) > 0:
     logging.error('{"panicked_parsers": %s', json.dumps(panicked_files))

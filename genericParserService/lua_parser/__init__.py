@@ -22,9 +22,10 @@ class Parser:
             parser_file (str): The name of the Lua parser file.
             parser_input (str): The input data to be parsed by the Lua parser.
         """
+        self._panic_logger = logging.getLogger("lua_panic_reporter")
+
         self.parser_file = parser_file
         self._parser_input = parser_input
-        self._logger = logging.getLogger("lua_parser")
 
         self._lua = LuaRuntime(unpack_returned_tuples=True)
         self._lua.eval("function() python = nil; end")()
@@ -42,7 +43,7 @@ class Parser:
                 self._parser_func = self._lua.eval(f.read())
             except LuaError as e:
                 self._panic = True
-                self._logger.error("Could not load parser with the following error: %s", e)
+                self._panic_logger.error("Could not load parser with the following error: %s", e)
 
 
     @property
@@ -66,7 +67,7 @@ class Parser:
         Converts the Lua parsing result to a dictionary format and stores it in the result attribute.
         """
         if self._panic:
-            self._logger.error("Not parsing %s, already panicked", self.parser_file)
+            self._panic_logger.error("Not parsing %s, already panicked", self.parser_file)
             return
 
         self._thread_id = threading.current_thread().native_id
@@ -75,7 +76,7 @@ class Parser:
             result = self._parser_func(self._parser_input)
         except LuaError as e:
             self._panic = True
-            self._logger.error("Parser crashed with the following error: %s", e)
+            self._panic_logger.error("Parser crashed with the following error: %s", e)
             return
 
         if os.getenv(f"_PARSER_LUA_PANIC_{self._thread_id}", "0") == "1":
