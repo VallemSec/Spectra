@@ -2,6 +2,12 @@ import os
 
 
 class ParserFinder:
+    """
+    A class to locate and yield Lua parser files from a specified directory.
+
+    Methods:
+        yield_parsers(): Yields each parser file path in the _parsers list.
+    """
     def __init__(self, parser_path: str, parser_folder: str):
         absolute_parser_path = os.path.join(
             parser_folder.rstrip("/"), parser_path)
