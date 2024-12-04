@@ -148,7 +148,6 @@ func CleanParserOutput(input string) string {
 	input = removeEscapeChars(input)
 
 	input = strings.ReplaceAll(input, `,""`, ``)
-	input = input[2 : len(input)-3]
 
 	return input
 }

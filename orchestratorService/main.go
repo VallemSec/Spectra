@@ -233,17 +233,19 @@ func runScan(rf types.RunnerConfig, t, decodyId string, cf types.ConfigFile, res
 		return "", err
 	}
 
-	pr := sendResultToParser(rf, sr, logger)
+	joinedSr := strings.Join(sr, "\n")
+
+	pr := sendResultToParser(rf, joinedSr, logger)
 
 	sendResultToDecody(pr, rf, decodyId, logger)
 
 	runSubsequentScans(pr, rf, t, decodyId, cf, prevScans, logger)
 
-	return sr, nil
+	return joinedSr, nil
 }
 
 // this function kicks off a docker container with the given configuration and returns the output of the container
-func runDockerService(runConf types.RunnerConfig, volumes, env []string, logger *logrus.Entry) (string, error) {
+func runDockerService(runConf types.RunnerConfig, volumes, env []string, logger *logrus.Entry) ([]string, error) {
 	logger.Info("Running docker service: ", runConf.Image, ":", runConf.ImageVersion, " with args: ", runConf.CmdArgs)
 	configJSON := types.RunnerJSON{
 		ContainerName:    runConf.Image,
@@ -256,20 +258,25 @@ func runDockerService(runConf types.RunnerConfig, volumes, env []string, logger 
 
 	jsonValue, err := json.Marshal(configJSON)
 	if err != nil {
-		return "", err
+		return []string{}, err
 	}
 
 	resp, err := http.Post(os.Getenv("DOCKER_RUNNER_SERVICE"), "application/json", bytes.NewBuffer(jsonValue))
 	if err != nil {
-		return "", err
+		return []string{}, err
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
+	if resp.StatusCode != http.StatusOK {
+		return []string{}, fmt.Errorf("docker runner service failed with status code %d", resp.StatusCode)
 	}
 
-	return string(body), nil
+	body := types.DockerRunnerResult{}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		logger.Error("Error decoding response from docker runner service:", err)
+		return []string{}, err
+	}
+
+	return body.Stdout, fmt.Errorf(strings.Join(body.Stderr, "\n"))
 }
 
 func sendResultToParser(runConf types.RunnerConfig, containerOutput string, logger *logrus.Entry) types.ParserOutputJson {
@@ -285,13 +292,15 @@ func sendResultToParser(runConf types.RunnerConfig, containerOutput string, logg
 		return types.ParserOutputJson{}
 	}
 
-	serviceOut = utils.CleanParserOutput(serviceOut)
+	serviceOutJoined := strings.Join(serviceOut, "\n")
+
+	serviceOutJoined = utils.CleanParserOutput(serviceOutJoined)
 
 	// parse the output of the parser
 	var pout types.ParserOutputJson
-	if err := json.Unmarshal([]byte(serviceOut), &pout); err != nil {
+	if err := json.Unmarshal([]byte(serviceOutJoined), &pout); err != nil {
 		logger.Error("Error unmarshalling parser output:", err)
-		logger.Error("Parser output:", serviceOut)
+		logger.Error("Parser output:", serviceOutJoined)
 		return types.ParserOutputJson{}
 	}
 

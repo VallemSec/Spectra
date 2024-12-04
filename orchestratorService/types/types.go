@@ -27,6 +27,11 @@ type RunnerConfig struct {
 	Tty           bool                `yaml:"tty"`
 }
 
+type DockerRunnerResult struct {
+	Stdout []string `json:"stdout"`
+	Stderr []string `json:"stderr"`
+}
+
 type ParserOutputJson struct {
 	ScannerName string   `json:"name"`
 	Results     []Result `json:"results"`
