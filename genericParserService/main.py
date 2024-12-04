@@ -40,7 +40,7 @@ pf = ParserFinder(args.target, PARSER_FOLDER)
 
 lua_parser_threads = []
 for parser_file in pf.yield_parsers():
-    lua_parser = Parser(parser_file, args.input, PARSER_FOLDER)
+    lua_parser = Parser(parser_file, args.input)
     thread = threading.Thread(target=lua_parser.parse)
     lua_parser_threads.append({"thread": thread, "parser": lua_parser})
     thread.start()
