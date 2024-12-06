@@ -235,7 +235,10 @@ func runScan(rf types.RunnerConfig, t, decodyId string, cf types.ConfigFile, res
 
 	joinedSr := strings.Join(sr, "\n")
 
-	pr := sendResultToParser(rf, joinedSr, logger)
+	pr, err := sendResultToParser(rf, joinedSr, logger)
+	if err != nil {
+		return "", err
+	}
 
 	sendResultToDecody(pr, rf, decodyId, logger)
 
@@ -279,7 +282,7 @@ func runDockerService(runConf types.RunnerConfig, volumes, env []string, logger 
 	return body.Stdout, fmt.Errorf(strings.Join(body.Stderr, "\n"))
 }
 
-func sendResultToParser(runConf types.RunnerConfig, containerOutput string, logger *logrus.Entry) types.ParserOutputJson {
+func sendResultToParser(runConf types.RunnerConfig, containerOutput string, logger *logrus.Entry) (types.ParserOutputJson, error) {
 	// Clean the output of the container
 	containerOutput = utils.CleanControlCharacters(containerOutput)
 
@@ -289,7 +292,25 @@ func sendResultToParser(runConf types.RunnerConfig, containerOutput string, logg
 		CmdArgs:      []string{runConf.ContainerName, runConf.ParserPlugin, containerOutput},
 	}, []string{os.Getenv("PARSERS_FOLDER") + ":/parsers"}, []string{"PARSER_FOLDER=/parsers"}, logger)
 	if err != nil {
-		return types.ParserOutputJson{}
+		// unmarshal the output of the parser error to get what's inside logger_name
+		type errOutType struct {
+			LoggerName string `json:"logger_name"`
+			Message    string `json:"message"`
+		}
+		var errOut errOutType
+		if err := json.Unmarshal([]byte(containerOutput), &errOut); err != nil {
+			return types.ParserOutputJson{}, err
+		}
+
+		if errOut.LoggerName == "lua_panic_reporter" {
+			logger.Error("Parser panic: ", errOut.Message)
+			return types.ParserOutputJson{}, fmt.Errorf("parser error: %s", errOut.Message)
+		} else if errOut.LoggerName == "lua_error_reporter" {
+			logger.Error("Parser error: ", errOut.Message)
+			return types.ParserOutputJson{}, fmt.Errorf("parser error: %s", errOut.Message)
+		}
+
+		return types.ParserOutputJson{}, err
 	}
 
 	serviceOutJoined := strings.Join(serviceOut, "\n")
@@ -301,13 +322,13 @@ func sendResultToParser(runConf types.RunnerConfig, containerOutput string, logg
 	if err := json.Unmarshal([]byte(serviceOutJoined), &pout); err != nil {
 		logger.Error("Error unmarshalling parser output:", err)
 		logger.Error("Parser output:", serviceOutJoined)
-		return types.ParserOutputJson{}
+		return types.ParserOutputJson{}, err
 	}
 
 	return types.ParserOutputJson{
 		ScannerName: runConf.ContainerName,
 		Results:     pout.Results,
-	}
+	}, nil
 }
 
 func sendResultToDecody(pout types.ParserOutputJson, rf types.RunnerConfig, decodyId string, logger *logrus.Entry) {
