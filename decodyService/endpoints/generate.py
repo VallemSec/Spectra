@@ -5,8 +5,9 @@ from flask import Blueprint
 import json
 
 from helpers import Database, AI
-from helpers.types import DecodyDatabaseResultFormat, DecodyCategoryOutputFormat, \
-    DecodyFindingsOutputFormat
+from helpers.types import (
+    DecodyDatabaseResultFormat, DecodyCategoryOutputFormat,
+    DecodyFindingsOutputFormat)
 
 generate_app = Blueprint("generate_app", __name__)
 logger = logging.getLogger(__name__)
@@ -27,7 +28,6 @@ def generate_endpoint(request_id: str):
         logger.error("request_id '%s' not found", request_id)
         return "request_id not found", 404
     db_results: list[DecodyDatabaseResultFormat] = json.loads(db_entry)
-
 
     category_findings: defaultdict[str, list[DecodyFindingsOutputFormat]] = defaultdict(list)
     for result in db_results:
