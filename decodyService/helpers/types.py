@@ -17,8 +17,13 @@ class DecodyDatabaseRuleFormat(TypedDict):
     condition: str
     name: str
 
-class DecodyOutputResultFormat(TypedDict):
+class DecodyDatabaseResultFormat(TypedDict):
     category: str
+    rule_name: str
+    rule_explanation: str
+    scanner_name: str
+
+class DecodyFindingsOutputFormat(TypedDict):
     rule_name: str
     rule_explanation: str
     scanner_name: str
@@ -26,7 +31,7 @@ class DecodyOutputResultFormat(TypedDict):
 class DecodyCategoryOutputFormat(TypedDict):
     category: str
     ai_advice: str
-    results: list[DecodyOutputResultFormat]
+    results: list[DecodyFindingsOutputFormat]
 
 class DecodyOutputFormat(TypedDict):
     ai_advice: str
