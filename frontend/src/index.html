@@ -3,110 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spectra</title>
+    <title>Spectra - Home</title>
     <link rel="stylesheet" href="style/style.scss">
-    <script src="script/test.js" type="module"></script>
+    <script src="script/posts.js" defer></script>
 </head>
     <body>
-        <main>
-            <h1 class="text-center py-8 text-5xl font-bold">Scanresultaten Domain.com</h1>
-
-            <div class="container grid grid-cols-12 gap-7 pb-12">
-                <div class="col-span-3">
-                    <div class="grid sticky top-5 gap-y-5">
-                        <div class="grid justify-items-center shadow-box border-2 border-gray-900 py-7 rounded-xl">
-                            <h3 class="font-bold text-2xl mb-4">Totale score:</h3>
-                            <div class="grid w-36">
-                                <p class="absolute justify-self-center self-center text-2xl font-bold">80%</p>
-                                <canvas id="acquisitions"></canvas>
-                            </div>
-                        </div>
-                        <div class="grid justify-items-center shadow-box border-2 border-gray-900 py-7 rounded-md">
-                            <p class="text-xl font-bold mb-4">Zelf oplossen?</p>
-                            <a class="bg-blue-vallem text-white py-3 px-5 font-bold text-xl rounded-xl" target="_blank" href="https://ismijnbedrijfveilig.nl/c/cyberinfohub/">Cyber Resources</a>
-                        </div>
-                    </div>
+        <div class="bg-gray-900 py-4">
+            <div class="container grid grid-cols-12">
+                <div class="col-span-5">
+                    <h1 class="text-3xl text-white font-bold">Spectra</h1>
+                 <a href="https://vallem.com" target="_blank" class="text-white font-bold -mt-1 hover:underline">Vallem</a>
                 </div>
-                <div class="col-span-9 grid gap-y-10">
-                    <div class="grid grid-cols-12">
-                        <div class="col-span-7 pr-8 my-auto">
-                            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc eu  facilisis quam. Integer ultrices lacus sit amet ligula ullamcorper  ultrices. Sed quis ante at massa cursus pellentesque. Duis tempor  rhoncus fringilla. Suspendisse vulputate ornare aliquam. Aenean  facilisis neque neque, id fringilla neque bibendum at. Pellentesque  justo lacus, finibus nec nibh non, mollis gravida nulla. Quisque  volutpat metus sit amet arcu.</p>
-                        </div>
-                        <div class="col-span-5">
-                            <img src="img/placeholder.jpg" alt="placeholder">
-                        </div>
-                    </div>
-                    <div class="bg-gray-900 p-10 rounded-md">
-                        <h2 class="flex items-center gap-x-2 text-2xl font-bold text-white"><img class="w-5 h-5" src="img/sparkle.svg" alt="">AI Advies</h2>
-                        <p class="text-white mt-4">
-                            Lorem ipsum dolor sit amet consectetur adipisicing elit. Sit unde laboriosam aliquam corporis omnis, cumque, voluptates quaerat nobis saepe, minus quae animi sequi exercitationem nesciunt culpa perspiciatis nihil temporibus illum. Tempora omnis atque, deserunt ratione libero placeat? Quibusdam cumque quisquam reiciendis suscipit earum, id sapiente corporis culpa ipsa et porro facere, odit ullam aliquam odio at voluptatum adipisci numquam nihil, aspernatur excepturi labore magnam recusandae? Quisquam maiores veritatis quibusdam, a nostrum facilis aliquam beatae modi repellendus ex consequuntur magnam expedita excepturi similique optio ad minus in cumque exercitationem aspernatur nam iure! Nemo similique pariatur at esse sit nesciunt et molestias, rerum obcaecati perferendis dolorum hic voluptatibus blanditiis nulla voluptates illum! Quidem accusantium aspernatur distinctio, vero nesciunt exercitationem quibusdam, ea temporibus minus, ut consequuntur aliquid quam dolor ab eligendi! Dolore, qui eum, dolorem iste doloremque deserunt voluptatibus voluptas expedita, dignissimos beatae tenetur quaerat eveniet saepe minus. Molestiae voluptatibus rerum officiis et.
-                        </p>
-                    </div>
-                    <div>
-                        <h2 class="text-2xl font-bold mb-4">Details</h2>
-                        <grid class="grid grid-cols-4 gap-4">
-                            <div class="relative col-span-4 md:col-span-2 p-4 shadow-box border-2 border-gray-900 rounded-md">
-                                <button class="absolute top-4 right-4"><img src="img/info.svg" alt=""></button>
-                                <p class="text-xl font-bold">
-                                    Foutmelding
-                                </p>
-                                <p>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Unde libero inventore ipsum facilis aliquam enim, velit nesciunt quis distinctio ducimus!</p>
-                            </div>
-                            <div class="relative col-span-4 md:col-span-2 p-4 shadow-box border-2 border-gray-900 rounded-md">
-                                <button class="absolute top-4 right-4"><img src="img/info.svg" alt=""></button>
-                                <p class="text-xl font-bold">
-                                    Foutmelding
-                                </p>
-                                <p>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Unde libero inventore ipsum facilis aliquam enim, velit nesciunt quis distinctio ducimus!</p>
-                            </div>
-                            <div class="relative col-span-4 md:col-span-2 p-4 shadow-box border-2 border-gray-900 rounded-md">
-                                <button class="absolute top-4 right-4"><img src="img/info.svg" alt=""></button>
-                                <p class="text-xl font-bold">
-                                    Foutmelding
-                                </p>
-                                <p>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Unde libero inventore ipsum facilis aliquam enim, velit nesciunt quis distinctio ducimus!</p>
-                            </div>
-                            <div class="relative col-span-4 md:col-span-2 p-4 shadow-box border-2 border-gray-900 rounded-md">
-                                <button class="absolute top-4 right-4"><img src="img/info.svg" alt=""></button>
-                                <p class="text-xl font-bold">
-                                    Foutmelding
-                                </p>
-                                <p>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Unde libero inventore ipsum facilis aliquam enim, velit nesciunt quis distinctio ducimus!</p>
-                            </div>
-                            <div class="relative col-span-4 md:col-span-2 p-4 shadow-box border-2 border-gray-900 rounded-md">
-                                <button class="absolute top-4 right-4"><img src="img/info.svg" alt=""></button>
-                                <p class="text-xl font-bold">
-                                    Foutmelding
-                                </p>
-                                <p>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Unde libero inventore ipsum facilis aliquam enim, velit nesciunt quis distinctio ducimus!</p>
-                            </div>
-                            <div class="relative col-span-4 md:col-span-2 p-4 shadow-box border-2 border-gray-900 rounded-md">
-                                <button class="absolute top-4 right-4"><img src="img/info.svg" alt=""></button>
-                                <p class="text-xl font-bold">
-                                    Foutmelding
-                                </p>
-                                <p>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Unde libero inventore ipsum facilis aliquam enim, velit nesciunt quis distinctio ducimus!</p>
-                            </div>
-                            <div class="relative col-span-4 md:col-span-2 p-4 shadow-box border-2 border-gray-900 rounded-md">
-                                <button class="absolute top-4 right-4"><img src="img/info.svg" alt=""></button>
-                                <p class="text-xl font-bold">
-                                    Foutmelding
-                                </p>
-                                <p>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Unde libero inventore ipsum facilis aliquam enim, velit nesciunt quis distinctio ducimus!</p>
-                            </div>
-                            <div class="relative col-span-4 md:col-span-2 p-4 shadow-box border-2 border-gray-900 rounded-md">
-                                <button class="absolute top-4 right-4"><img src="img/info.svg" alt=""></button>
-                                <p class="text-xl font-bold">
-                                    Foutmelding
-                                </p>
-                                <p>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Unde libero inventore ipsum facilis aliquam enim, velit nesciunt quis distinctio ducimus!</p>
-                            </div>
-                        </grid>
-                    </div>
+                <div class="col-span-2 col-start-10 grid justify-end">
+                    <a href="https://github.com/VallemSec/Spectra" target="_blank" class="grid self-center">
+                        <img class="h-8" src="img/github.svg">
+                    </a>
                 </div>
             </div>
-        </main>
-        <footer class="bg-gray-900 py-2">
+        </div>
+        <div class="grid container min-h-[90vh]">
+            <form class="relative grid justify-center content-center" action="results.html" method="get">
+                <label class="text-center text-2xl font-bold mb-2" for="domain">Scan je domein</label>
+                <div class="relative grid min-w-72 lg:min-w-[500px]">
+                    <input class="border-2 rounded-md px-3 py-2 pr-7 border-gray-500 shadow-box text-xl" type="text" id="domain" name="domain" placeholder="ismijnbedrijfveilig.nl" required>
+                    <button class="absolute right-2 self-center hover:scale-110 transition-all">
+                        <img src="img/arrow.svg" class="w-8">
+                    </button>
+                </div>
+                <a class="justify-self-center absolute bottom-4" href="#scrollTo">
+                    <img class="w-10" src="img/arrow-down.svg">
+                </a>
+            </form>
+        </div>
+        <div class="container !mb-20 !mt-10">
+            <div class="grid grid-cols-12 gap-7 pt-10" id="scrollTo">
+                <div class="col-span-12 lg:col-span-6 my-auto">
+                    <h2 class="text-3xl pb-2 font-bold">
+                        Sample text
+                    </h2>
+                    <p>
+                        Lorem ipsum dolor sit amet consectetur adipisicing elit. Nostrum porro, id a amet sunt architecto rerum, nemo natus tempore accusamus aliquam iure. Tempora officia harum consequatur quos, assumenda quasi hic odio fuga vel nemo esse temporibus, blanditiis perferendis animi unde quibusdam repellat nulla voluptatibus facilis. Distinctio incidunt alias aliquid eligendi.
+                    </p>
+                </div>
+                <div class="col-span-12 lg:col-span-6">
+                    <img class="w-full rounded-md max-h-72 lg:max-h-max object-cover" src="img/placeholder.jpg">
+                </div>
+            </div>
+        </div>
+        <div class="container !my-20">
+            <h2 class="flex gap-x-2 font-bold text-4xl mb-2"><img src="img/news.svg" alt=""> Laatste nieuws</h2>
+            <div id="blogposts" class="grid grid-cols-12 gap-7">
+            </div>
+        </div>
+        <div class="container !my-20">
+            <div class="grid grid-cols-12 gap-7">
+                <div class="col-span-12 lg:col-span-6">
+                    <img class="w-full rounded-md max-h-72 lg:max-h-max object-cover" src="img/placeholder.jpg">
+                </div>
+                <div class="col-span-12 lg:col-span-6 my-auto">
+                    <h2 class="text-3xl pb-2 font-bold">
+                        Sample text
+                    </h2>
+                    <p>
+                        Lorem ipsum dolor sit amet consectetur adipisicing elit. Nostrum porro, id a amet sunt architecto rerum, nemo natus tempore accusamus aliquam iure. Tempora officia harum consequatur quos, assumenda quasi hic odio fuga vel nemo esse temporibus, blanditiis perferendis animi unde quibusdam repellat nulla voluptatibus facilis. Distinctio incidunt alias aliquid eligendi.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="container !my-20">
+            <h2 class="text-3xl font-bold mb-2">Volg ons op</h2>
+            <div class="bg-gray-300 rounded-md p-5 flex gap-x-5 justify-center">
+                <a href="https://vallem.com" target="_blank" class="grid bg-gray-900 rounded-md aspect-square w-24 hover:scale-110 transition-all duration-150 relative">
+                    <img class="justify-self-center self-center w-6 md:w-auto" src="img/vallem.svg">
+                </a>
+                <a href="https://www.youtube.com/@VallemSecurity" target="_blank" class="grid bg-gray-900 rounded-md aspect-square w-24 hover:scale-110 transition-all duration-150 relative">
+                    <img class="justify-self-center self-center w-6 md:w-auto" src="img/youtube.svg">
+                </a>
+                <a href="https://www.facebook.com/people/Vallem/61557695083455/" target="_blank" class="grid bg-gray-900 rounded-md aspect-square w-24 hover:scale-110 transition-all duration-150 relative">
+                    <img class="justify-self-center self-center w-6 md:w-auto" src="img/facebook.svg">
+                </a>
+                <a href="https://www.instagram.com/vallemsecurity/" target="_blank" class="grid bg-gray-900 rounded-md aspect-square w-24 hover:scale-110 transition-all duration-150 relative">
+                    <img class="justify-self-center self-center w-6 md:w-auto" src="img/instagram.svg">
+                </a>
+                <a href="https://www.linkedin.com/company/vallemsecurity/" target="_blank" class="grid bg-gray-900 rounded-md aspect-square w-24 hover:scale-110 transition-all duration-150 relative">
+                    <img class="justify-self-center self-center w-6 md:w-auto" src="img/linkedin.svg">
+                </a>
+            </div>
+        </div>
+        <footer class="bg-gray-900 py-2 mt-5">
             <p class="text-white text-center">Proudly presented by <a href="https://vallem.com" class="underline hover:text-blue-vallem" target="_blank">Vallem</a></p>
         </footer>
     </body>

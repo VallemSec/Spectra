@@ -1,3 +1,10 @@
+// Insert domain name
+const queryString = window.location.search;
+const urlParams = new URLSearchParams(queryString);
+
+document.getElementById('domain').innerHTML = urlParams.get('domain');
+
+// Fill chart
 import Chart from 'chart.js/auto'
 
 (async function() {

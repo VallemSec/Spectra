@@ -2,12 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+    scroll-behavior: smooth;
+}
+
 /* Define container */
 .container {
     margin: auto;
 
     /* Extra small */
     width: auto;
+
+    // Add padding
+    padding: 0 15px;
 
     /* Small */
     @media (min-width: 576px) {
@@ -41,3 +48,13 @@
     font-style: normal;
 }
 
+* {
+    font-family: Helvetica;
+}
+
+// Blogposts
+.post {
+    img {
+        @apply h-56 w-full object-cover object-center rounded-md;
+    }
+}
