@@ -9,7 +9,7 @@ form.addEventListener('submit', (e) => {
     headers.append("Content-Type", "application/json");
 
     const raw = JSON.stringify({
-    "target": "https://spectra.sakuracloud.nl/"
+    "target": domainfield.value
     });
 
     const requestOptions = {
