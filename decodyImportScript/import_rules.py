@@ -2,8 +2,7 @@ import sys
 import os
 import pymysql
 import yaml
-
-from helpers import Database
+import dotenv
 
 
 def get_rules_from_file(file: str) -> list:
@@ -15,7 +14,24 @@ def get_rules_from_file(file: str) -> list:
         return []
 
 
-parser_folder = sys.argv[1]
+def db_connect(host: str = None,
+               port: int = None,
+               user: str = None,
+               password: str = None,
+               db: str = None):
+    return pymysql.Connect(
+        host=host or os.getenv("MARIADB_HOST") or "localhost",
+        port=port or int(os.getenv("MARIADB_PORT", 0)) or 3306,
+        user=user or os.getenv("MARIADB_USER") or "root",
+        password=password or os.getenv("MARIADB_PASSWORD") or "password",
+        database=db or os.getenv("MARIADB_DATABASE") or "decody_devdb",
+        cursorclass=pymysql.cursors.DictCursor
+    )
+
+
+dotenv.load_dotenv()
+
+parser_folder = sys.argv[1] if len(sys.argv) > 1 else None
 
 if parser_folder is None:
     print("No folder provided")
@@ -42,12 +58,12 @@ for file in os.listdir(parser_folder):
         for root, _, files in os.walk(os.path.join(parser_folder, file)):
             for file in files:
                 if file.endswith(".yaml"):
-                    print(f"Found: "+ os.path.relpath(os.path.join(root, file), parser_folder))
+                    print(f"Found: " + os.path.relpath(os.path.join(root, file), parser_folder))
                     # add the path from the parser folder to the file
                     parser_files.add(os.path.relpath(os.path.join(root, file), parser_folder))
 
 try:
-    conn = Database.db_connect()
+    conn = db_connect()
 except pymysql.err.OperationalError:
     print("Failed to open connection to maria db")
     sys.exit(1)
