@@ -35,4 +35,3 @@ tomlkit==0.13.2
 tqdm==4.67.1
 typing_extensions==4.12.2
 Werkzeug==3.0.4
-pyyaml==6.0.2
