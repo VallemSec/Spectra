@@ -42,3 +42,8 @@ class DecodyCategoryOutputFormat(TypedDict):
 class DecodyOutputFormat(TypedDict):
     ai_advice: str
     results: dict[str, DecodyCategoryOutputFormat]
+
+
+class DecodyPromptFormat(TypedDict):
+    category_prompt: str
+    summary_prompt: str

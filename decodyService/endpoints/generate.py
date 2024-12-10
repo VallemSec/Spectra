@@ -7,7 +7,7 @@ import json
 from helpers import Database, AI
 from helpers.types import (
     DecodyDatabaseResultFormat, DecodyCategoryOutputFormat,
-    DecodyFindingsOutputFormat)
+    DecodyFindingsOutputFormat, DecodyPromptFormat)
 
 generate_app = Blueprint("generate_app", __name__)
 logger = logging.getLogger(__name__)
@@ -39,7 +39,10 @@ def generate_endpoint(request_id: str):
             )
         )
 
-    ai = AI()
+    db_prompts = Database.KeyStorage.get("decody-prompts")
+    if db_prompts is None: return "", 500
+    prompts: DecodyPromptFormat = json.loads(db_prompts)
+    ai = AI(prompts)
 
     results: list[DecodyCategoryOutputFormat] = list()
     for category, findings in category_findings.items():
