@@ -40,7 +40,7 @@ class AI:
                 "content": [
                     {
                         "type": "text",
-                        #"text": "Explain the errors like I am five but in Dutch"
+                        # "text": "Explain the errors like I am five but in Dutch"
                         "text": self._prompts["category_prompt"]
                     },
                     {"type": "text", "text": json.dumps(errors)}
@@ -59,7 +59,7 @@ class AI:
                 "content": [
                     {
                         "type": "text",
-                        #"text": "Summarize like I am five but in Dutch"
+                        # "text": "Summarize like I am five but in Dutch"
                         "text": self._prompts["summary_prompt"]
                     },
                     {"type": "text", "text": json.dumps(category_advices)}
