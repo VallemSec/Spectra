@@ -72,26 +72,21 @@ try:
     with conn.cursor() as cursor:
         for file in parser_files:
             cursor.execute("""
-            SELECT * FROM files WHERE file_name = %s;
+            INSERT INTO files (file_name) VALUES (%s)
+            ON DUPLICATE KEY UPDATE file_name = VALUES(file_name);
             """, (file,))
-
-            if cursor.rowcount == 0:
-                cursor.execute("""
-                INSERT INTO files (file_name) VALUES (%s)ON DUPLICATE KEY UPDATE file_name = file_name;
-                """, (file,))
 
             rules = get_rules_from_file(os.path.join(parser_folder, file))
             for rule in rules:
                 cursor.execute("""
-                SELECT * FROM rules
-                WHERE category = %s AND explanation = %s AND `condition` = %s AND name = %s AND file_id = (SELECT id FROM files WHERE file_name = %s);
+                INSERT INTO rules (category, explanation, `condition`, name, file_id)
+                VALUES (%s, %s, %s, %s, (SELECT id FROM files WHERE file_name = %s LIMIT 1))
+                ON DUPLICATE KEY UPDATE
+                    category = VALUES(category),
+                    explanation = VALUES(explanation),
+                    `condition` = VALUES(`condition`),
+                    name = VALUES(name);
                 """, (rule["category"], rule["explanation"], rule["condition"], rule["name"], file))
-
-                if cursor.rowcount == 0:
-                    cursor.execute("""
-                    INSERT INTO rules (category, explanation, `condition`, name, file_id)
-                    VALUES (%s, %s, %s, %s, (SELECT id FROM files WHERE file_name = %s));
-                    """, (rule["category"], rule["explanation"], rule["condition"], rule["name"], file))
 
         conn.commit()
 except Exception as e:
