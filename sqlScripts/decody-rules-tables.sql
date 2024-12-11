@@ -22,6 +22,8 @@ create table if not exists rules
     `condition` text                          not null,
     file_id     int                           not null,
     name        text                          not null,
+    constraint rules_unique
+        unique (category, name) using hash,
     constraint rules_ibfk_1
         foreign key (file_id) references files (id)
 );
