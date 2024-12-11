@@ -1,3 +1,4 @@
+import threading
 from collections import defaultdict
 import logging
 
@@ -11,6 +12,16 @@ from helpers.types import (
 
 generate_app = Blueprint("generate_app", __name__)
 logger = logging.getLogger(__name__)
+
+
+class AIAdvice:
+    def __init__(self, findings: list[str], ai: AI):
+        self.findings = findings
+        self.ai = ai
+        self.advice = None
+
+    def generate(self):
+        self.advice = self.ai.generate_category_ai_advice(self.findings)
 
 
 @generate_app.get("/generate/<request_id>")
@@ -40,19 +51,38 @@ def generate_endpoint(request_id: str):
         )
 
     db_prompts = Database.KeyStorage.get("decody-prompts")
-    if db_prompts is None: return "", 500
+    if db_prompts is None:
+        return "", 500
     prompts: DecodyPromptFormat = json.loads(db_prompts)
     ai = AI(prompts)
 
-    results: list[DecodyCategoryOutputFormat] = list()
+    threads = []
     for category, findings in category_findings.items():
-        ai_category_advice = ai.generate_category_ai_advice(
-            [i["rule_explanation"] for i in findings]
-        )
+        ai_thread = AIAdvice([i["rule_explanation"] for i in findings], ai)
+        thread = threading.Thread(target=ai_thread.generate)
+        threads.append({
+            "thread": thread,
+            "ai": ai_thread,
+            "category": category,
+            "findings": findings
+        })
+        thread.start()
+
+    thread_active = [True for _ in range(len(threads))]
+    while True in thread_active:
+        for i, thread in enumerate(threads):
+            if not thread["thread"].is_alive():
+                thread_active[i] = False
+
+    results: list[DecodyCategoryOutputFormat] = list()
+    for thread in threads:
+        ai_thread = thread["ai"]
+        category = thread["category"]
+        findings = thread["findings"]
         results.append(DecodyCategoryOutputFormat(
             category=category,
-            ai_advice=ai_category_advice,
-            results=findings,
+            ai_advice=ai_thread.advice,
+            results=findings
         ))
 
     ai_advice = ai.generate_complete_ai_advice(
