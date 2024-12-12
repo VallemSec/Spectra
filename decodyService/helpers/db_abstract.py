@@ -1,6 +1,7 @@
 from flask import g
 
 import pymysql
+import pymysql.cursors
 import os
 
 from helpers.types import DecodyDatabaseRuleFormat
@@ -11,6 +12,7 @@ class Database:
     Class that contains all the static methods for
     interacting with the database.
     """
+
     @staticmethod
     def db_connect(host: str = None,
                    port: int = None,
@@ -19,7 +21,7 @@ class Database:
                    db: str = None):
         return pymysql.Connect(
             host=host or os.getenv("MARIADB_HOST") or "localhost",
-            port=port or int(os.getenv("MARIADB_PORT", 0)) or 3306,
+            port=port or int(os.getenv("MARIADB_PORT", "0")) or 3306,
             user=user or os.getenv("MARIADB_USER") or "root",
             password=password or os.getenv("MARIADB_PASSWORD") or "password",
             database=db or os.getenv("MARIADB_DATABASE") or "decody_devdb",
@@ -34,19 +36,19 @@ class Database:
         conn: pymysql.Connection = connection or g.mariadb_conn
         with conn.cursor() as cursor:
             cursor.execute("""
-            SELECT r.id, r.category, r.explanation, r.`condition`, r.name 
+            SELECT r.id, r.category, r.explanation, r.`condition`, r.name
             FROM rules r, files f
             WHERE f.file_name = %s AND r.file_id = f.id;
             """, (rule_file_name,))
-            results = cursor.fetchall()
+            results: list[DecodyDatabaseRuleFormat] = cursor.fetchall()
             for result in results:
                 output.append(
                     DecodyDatabaseRuleFormat(
-                        id = result["id"],
-                        category = result["category"],
-                        explanation = result["explanation"],
-                        condition = result["condition"],
-                        name = result["name"]
+                        id=result["id"],
+                        category=result["category"],
+                        explanation=result["explanation"],
+                        condition=result["condition"],
+                        name=result["name"]
                     ))
         return output
 
@@ -55,6 +57,7 @@ class Database:
         Class that contains all the static methods for
         interacting with the key-value storage in the Database.
         """
+
         @staticmethod
         def set(key: str, value: str,
                 connection: pymysql.Connection = None) -> int:
