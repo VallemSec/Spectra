@@ -24,6 +24,8 @@
   },
   "dependencies": {
     "chart.js": "^4.4.7",
-    "dotenv": "^16.4.7"
+    "dotenv": "^16.4.7",
+    "tippy.js": "^6.3.7",
+    "typed.js": "^2.1.0"
   }
 }

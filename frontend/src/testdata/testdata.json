@@ -1,0 +1,29 @@
+{
+    "advice": "TechTradeHub is een online marktplaats die zich richt op het kopen en verkopen van technische gadgets, zoals laptops, smartphones, en accessoires. Hoewel het platform een indrukwekkend aantal functies biedt, zoals een intuïtieve interface en uitgebreide filters voor productzoekopdrachten, zijn er enkele beveiligingsproblemen die vragen oproepen over de algehele veiligheid van de website.",
+    "results": [
+        {
+            "category": "Security",
+            "name": "Gebruikersauthenticatie",
+            "description": "{ Technische details over het beveiligingsprobleem }",
+            "ai_advice": "Een van de eerste beveiligingsproblemen van TechTradeHub ligt bij de gebruikersauthenticatie. Hoewel de website een basisvorm van inloggen vereist met een gebruikersnaam en wachtwoord, ontbreekt een belangrijke extra beveiligingslaag: twee-factor-authenticatie (2FA). Dit maakt het voor kwaadwillenden eenvoudiger om toegang te krijgen tot accounts, vooral als gebruikers zwakke wachtwoorden gebruiken. Daarnaast worden gebruikers niet verplicht om sterke wachtwoorden aan te maken. Dit verhoogt de kans op brute force-aanvallen aanzienlijk."
+        },
+        {
+            "category": "Security",
+            "name": "Onvoldoende Versleuteling",
+            "description": "{ Technische details over het beveiligingsprobleem }",
+            "ai_advice": "Een ander serieus probleem is het gebrek aan adequate versleuteling op verschillende gevoelige onderdelen van de website. Terwijl de website gebruik maakt van HTTPS voor gegevensoverdracht, zijn er aanwijzingen dat gevoelige informatie, zoals wachtwoorden, niet correct wordt versleuteld in de database. Uit een hypothetische penetratietest blijkt dat wachtwoorden in platte tekst worden opgeslagen in plaats van gehashte formaten met moderne algoritmen zoals bcrypt. Dit vormt een groot risico, aangezien een datalek directe toegang tot gebruikerswachtwoorden zou geven."
+        },
+        {
+            "category": "Security",
+            "name": "Cross-Site Scripting (XSS)",
+            "description": "{ Technische details over het beveiligingsprobleem }",
+            "ai_advice": "TechTradeHub is ook kwetsbaar voor cross-site scripting (XSS)-aanvallen. Het probleem lijkt vooral te liggen in de gebruikersrecensiefunctionaliteit. Bezoekers kunnen recensies achterlaten op producten zonder dat de input goed wordt geschoond of gevalideerd. Kwaadwillenden kunnen hier misbruik van maken door schadelijke JavaScript-code in te voegen. Deze code wordt vervolgens uitgevoerd wanneer een andere gebruiker de betreffende recensie bekijkt. Dit kan leiden tot diefstal van sessiecookies of het uitvoeren van acties namens de gebruiker zonder hun medeweten."
+        },
+        {
+            "category": "Security",
+            "name": "SQL-Injection",
+            "description": "{ Technische details over het beveiligingsprobleem }",
+            "ai_advice": "Een andere ernstige kwetsbaarheid betreft SQL-injectie in de zoekfunctionaliteit. Hoewel het zoekveld handig is voor gebruikers om specifieke producten te vinden, blijkt het geen effectieve inputvalidatie te hebben. Kwaadwillenden kunnen malafide SQL-commando's invoeren om ongeautoriseerde toegang te krijgen tot de database. Dit zou kunnen resulteren in het stelen van gebruikersgegevens, zoals e-mailadressen en betalingsinformatie."
+        }
+    ]
+}

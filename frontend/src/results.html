@@ -5,20 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spectra - Scanresultaten</title>
     <link rel="stylesheet" href="style/style.scss">
-    <script src="script/test.js" type="module"></script>
+    <script src="script/env.js" type="module"></script>
+    <script src="script/results.js" type="module" defer></script>
 </head>
     <body>
         <main>
             <div class="bg-gray-900 py-4 mb-5">
                 <div class="container grid grid-cols-12">
                     <div class="col-span-2">
-                        <h1 class="text-3xl text-white font-bold">Spectra</h1>
+                        <a href="index.html" class="block text-3xl text-white font-bold hover:underline">Spectra</a>
                      <a href="https://vallem.com" target="_blank" class="text-white font-bold -mt-1 hover:underline">Vallem</a>
                     </div>
-                    <div class="col-span-5 grid items-center">
-                        <h1 class="text-3xl text-white font-bold justify-center">Scanresultaten <span id="domain"></span></h1>
-                     </div>
-                    <div class="col-span-2 col-start-10 grid justify-end">
+                    <div class="col-span-2 col-start-11 grid justify-end">
                         <a href="https://github.com/VallemSec/Spectra" target="_blank" class="grid self-center">
                             <img class="h-8" src="img/github.svg">
                         </a>
@@ -32,7 +30,7 @@
                             <h3 class="font-bold text-2xl mb-4">Totale score:</h3>
                             <div class="grid w-36">
                                 <p class="absolute justify-self-center self-center text-2xl font-bold">80%</p>
-                                <canvas id="acquisitions"></canvas>
+                                <canvas id="score"></canvas>
                             </div>
                         </div>
                         <div class="grid justify-items-center shadow-box border-2 border-gray-300 py-7 rounded-md">
@@ -44,78 +42,18 @@
                 <div class="col-span-12 lg:col-span-9 grid gap-y-10">
                     <div class="grid grid-cols-12">
                         <div class="col-span-12 lg:col-span-7 lg:mr-8 my-auto">
-                            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc eu  facilisis quam. Integer ultrices lacus sit amet ligula ullamcorper  ultrices. Sed quis ante at massa cursus pellentesque. Duis tempor  rhoncus fringilla. Suspendisse vulputate ornare aliquam. Aenean  facilisis neque neque, id fringilla neque bibendum at. Pellentesque  justo lacus, finibus nec nibh non, mollis gravida nulla. Quisque  volutpat metus sit amet arcu.</p>
+                            <h1 class="text-2xl lg:text-4xl font-bold pt-7 flex">Scanresultaat <span class="px-3" id="domain"></span></h1>
                         </div>
                         <div class="col-span-12 lg:col-span-5">
-                            <img class="mx-auto mt-4 lg:mt-0 rounded-md" src="img/placeholder.jpg" alt="placeholder">
                         </div>
                     </div>
                     <div class="bg-gray-900 p-10 rounded-md">
                         <h2 class="flex items-center gap-x-2 text-2xl font-bold text-white"><img class="w-5 h-5" src="img/sparkle.svg" alt="">AI Advies</h2>
-                        <p class="text-white mt-4">
-                            Lorem ipsum dolor sit amet consectetur adipisicing elit. Sit unde laboriosam aliquam corporis omnis, cumque, voluptates quaerat nobis saepe, minus quae animi sequi exercitationem nesciunt culpa perspiciatis nihil temporibus illum. Tempora omnis atque, deserunt ratione libero placeat? Quibusdam cumque quisquam reiciendis suscipit earum, id sapiente corporis culpa ipsa et porro facere, odit ullam aliquam odio at voluptatum adipisci numquam nihil, aspernatur excepturi labore magnam recusandae? Quisquam maiores veritatis quibusdam, a nostrum facilis aliquam beatae modi repellendus ex consequuntur magnam expedita excepturi similique optio ad minus in cumque exercitationem aspernatur nam iure! Nemo similique pariatur at esse sit nesciunt et molestias, rerum obcaecati perferendis dolorum hic voluptatibus blanditiis nulla voluptates illum! Quidem accusantium aspernatur distinctio, vero nesciunt exercitationem quibusdam, ea temporibus minus, ut consequuntur aliquid quam dolor ab eligendi! Dolore, qui eum, dolorem iste doloremque deserunt voluptatibus voluptas expedita, dignissimos beatae tenetur quaerat eveniet saepe minus. Molestiae voluptatibus rerum officiis et.
-                        </p>
+                        <p id="ai-advice" class="text-white mt-4"></p>
                     </div>
                     <div>
-                        <h2 class="text-2xl font-bold mb-4">Details</h2>
-                        <div class="grid grid-cols-4 gap-4 mb-5">
-                            <div class="relative col-span-4 lg:col-span-2 p-4 shadow-box border-2 border-gray-300 rounded-md">
-                                <button class="absolute top-4 right-4"><img src="img/info.svg" alt=""></button>
-                                <p class="text-xl font-bold flex">
-                                   <img src="img/warning.svg" class="w-5 h-5 self-center mr-1"> Foutmelding
-                                </p>
-                                <p>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Unde libero inventore ipsum facilis aliquam enim, velit nesciunt quis distinctio ducimus!</p>
-                            </div>
-                            <div class="relative col-span-4 lg:col-span-2 p-4 shadow-box border-2 border-gray-300 rounded-md">
-                                <button class="absolute top-4 right-4"><img src="img/info.svg" alt=""></button>
-                                <p class="text-xl font-bold">
-                                    Foutmelding
-                                </p>
-                                <p>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Unde libero inventore ipsum facilis aliquam enim, velit nesciunt quis distinctio ducimus!</p>
-                            </div>
-                            <div class="relative col-span-4 lg:col-span-2 p-4 shadow-box border-2 border-gray-300 rounded-md">
-                                <button class="absolute top-4 right-4"><img src="img/info.svg" alt=""></button>
-                                <p class="text-xl font-bold">
-                                    Foutmelding
-                                </p>
-                                <p>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Unde libero inventore ipsum facilis aliquam enim, velit nesciunt quis distinctio ducimus!</p>
-                            </div>
-                            <div class="relative col-span-4 lg:col-span-2 p-4 shadow-box border-2 border-gray-300 rounded-md">
-                                <button class="absolute top-4 right-4"><img src="img/info.svg" alt=""></button>
-                                <p class="text-xl font-bold">
-                                    Foutmelding
-                                </p>
-                                <p>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Unde libero inventore ipsum facilis aliquam enim, velit nesciunt quis distinctio ducimus!</p>
-                            </div>
-                            <div class="relative col-span-4 lg:col-span-2 p-4 shadow-box border-2 border-gray-300 rounded-md">
-                                <button class="absolute top-4 right-4"><img src="img/info.svg" alt=""></button>
-                                <p class="text-xl font-bold">
-                                    Foutmelding
-                                </p>
-                                <p>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Unde libero inventore ipsum facilis aliquam enim, velit nesciunt quis distinctio ducimus!</p>
-                            </div>
-                            <div class="relative col-span-4 lg:col-span-2 p-4 shadow-box border-2 border-gray-300 rounded-md">
-                                <button class="absolute top-4 right-4"><img src="img/info.svg" alt=""></button>
-                                <p class="text-xl font-bold">
-                                    Foutmelding
-                                </p>
-                                <p>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Unde libero inventore ipsum facilis aliquam enim, velit nesciunt quis distinctio ducimus!</p>
-                            </div>
-                            <div class="relative col-span-4 lg:col-span-2 p-4 shadow-box border-2 border-gray-300 rounded-md">
-                                <button class="absolute top-4 right-4"><img src="img/info.svg" alt=""></button>
-                                <p class="text-xl font-bold">
-                                    Foutmelding
-                                </p>
-                                <p>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Unde libero inventore ipsum facilis aliquam enim, velit nesciunt quis distinctio ducimus!</p>
-                            </div>
-                            <div class="relative col-span-4 lg:col-span-2 p-4 shadow-box border-2 border-gray-300 rounded-md">
-                                <button class="absolute top-4 right-4"><img src="img/info.svg" alt=""></button>
-                                <p class="text-xl font-bold">
-                                    Foutmelding
-                                </p>
-                                <p>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Unde libero inventore ipsum facilis aliquam enim, velit nesciunt quis distinctio ducimus!</p>
-                            </div>
-                        </div>
+                        <h2 class="flex items-center justify-between text-2xl font-bold mb-4">Details <span class="hover:cursor-pointer" id="disclaimer"><img src="img/info.svg"></span></h2>
+                        <div id="problems" class="grid grid-cols-4 gap-4 mb-5"></div>
                     </div>
                 </div>
             </div>
