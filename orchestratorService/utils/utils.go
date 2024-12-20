@@ -65,10 +65,10 @@ func NormalizeTarget(target string) (string, error) {
 	target = strings.ToLower(target)
 
 	// strip the protocol from the target
-	if strings.HasPrefix(target, "http://") || strings.HasPrefix(target, "https://") {
-		target = strings.TrimPrefix(target, "http://")
-		target = strings.TrimPrefix(target, "https://")
-	}
+	//if strings.HasPrefix(target, "http://") || strings.HasPrefix(target, "https://") {
+	//	target = strings.TrimPrefix(target, "http://")
+	//	target = strings.TrimPrefix(target, "https://")
+	//}
 
 	// strip the path from the target
 	if strings.Contains(target, "/") {
