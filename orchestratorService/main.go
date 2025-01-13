@@ -49,66 +49,79 @@ func init() {
 }
 
 func main() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		var jsonBody types.JSONbody
-		var prevScans []types.RunnerConfig
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", corsMiddleware(handleRequest))
 
-		err := json.NewDecoder(r.Body).Decode(&jsonBody)
-
-		err = json.NewDecoder(r.Body).Decode(&jsonBody)
-		jsonBody.Target, err = utils.NormalizeTarget(jsonBody.Target)
-		if err != nil {
-			log.Error(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-			return
-		}
-
-		decodyId := generateDecodyId(jsonBody.Target)
-
-		requestLogger := log.WithField("DecodyId", decodyId)
-
-		var wg sync.WaitGroup
-		config := copyConfig()
-		requestLogger.Trace("Created copy of the config")
-
-		// Run DiscoveryRunners concurrently
-		runRunnersConcurrently(config.DiscoveryRunners, config, jsonBody, decodyId, w, &wg, prevScans, requestLogger)
-
-		// Run AlwaysRun concurrently
-		runRunnersConcurrently(config.AlwaysRun, config, jsonBody, decodyId, w, &wg, prevScans, requestLogger)
-
-		// Wait for all scans to complete
-		wg.Wait()
-
-		// get the results from decody
-		resp, err := http.Get(os.Getenv("DECODY_SERVICE") + "/generate/" + decodyId)
-		if err != nil {
-			requestLogger.Error(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-			return
-		}
-
-		// return the results from decody to the client
-		io.Copy(w, resp.Body)
-
-		requestLogger.Info("Finished running all scans")
-	})
-
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	if err := http.ListenAndServe(":8080", mux); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next(w, r)
+	}
+}
+
+func handleRequest(w http.ResponseWriter, r *http.Request) {
+	var jsonBody types.JSONbody
+	var prevScans []types.RunnerConfig
+
+	err := json.NewDecoder(r.Body).Decode(&jsonBody)
+	if err != nil {
+		log.Error(err)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	jsonBody.Target, err = utils.NormalizeTarget(jsonBody.Target)
+	if err != nil {
+		log.Error(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	decodyId := generateDecodyId(jsonBody.Target)
+	requestLogger := log.WithField("DecodyId", decodyId)
+
+	var wg sync.WaitGroup
+	config := copyConfig()
+	requestLogger.Trace("Created copy of the config")
+
+	runRunnersConcurrently(config.DiscoveryRunners, config, jsonBody, decodyId, w, &wg, prevScans, requestLogger)
+	runRunnersConcurrently(config.AlwaysRun, config, jsonBody, decodyId, w, &wg, prevScans, requestLogger)
+
+	wg.Wait()
+
+	resp, err := http.Get(os.Getenv("DECODY_SERVICE") + "/generate/" + decodyId)
+	if err != nil {
+		requestLogger.Error(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	io.Copy(w, resp.Body)
+	requestLogger.Info("Finished running all scans")
 }
 
 func copyConfig() types.ConfigFile {
 	// Errors are ignored since they should not show up since the object originates from a yaml file
 	// which should already have stopped the program upon initializing if faulty
 	var configCopy types.ConfigFile
-
 	data, _ := yaml.Marshal(globalConfig)
 	_ = yaml.Unmarshal(data, &configCopy)
-
 	return configCopy
 }
 
@@ -314,10 +327,8 @@ func sendResultToParser(runConf types.RunnerConfig, containerOutput string, logg
 	}
 
 	serviceOutJoined := strings.Join(serviceOut, "\n")
-
 	serviceOutJoined = utils.CleanParserOutput(serviceOutJoined)
 
-	// parse the output of the parser
 	var pout types.ParserOutputJson
 	if err := json.Unmarshal([]byte(serviceOutJoined), &pout); err != nil {
 		logger.Error("Error unmarshalling parser output:", err)
@@ -398,6 +409,7 @@ func runSubsequentScans(pout types.ParserOutputJson, rc types.RunnerConfig, t, d
 		}(result)
 	}
 
+	// Wait for all scans to complete
 	wg.Wait()
 }
 
