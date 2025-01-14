@@ -2,28 +2,96 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.scss">
-    <script src="script.js" defer></script>
-    <title>Spectra</title>
+    <title>Spectra - Home</title>
+    <link rel="stylesheet" href="style/style.scss">
+    <script src="script/posts.js" defer></script>
 </head>
     <body>
-        <header class="bg-blue-400">
-            <h1 class="text-5xl py-8 px-5">
-                Spectra
-            </h1>
-        </header>
-        <section class="pt-16 max-w-[850px] mx-auto">
-            <h2 class="text-3xl pb-3">
-                Input:
-            </h2>
-            <form action="" id="form" method="post">
-                <label for="domain">Domain:</label>
-                <input class="border-1 border border-black p-1" type="text" id="domain" name="domain" required>
-                <input type="submit" value="Submit">
+        <div class="bg-gray-900 py-4">
+            <div class="container grid grid-cols-12">
+                <div class="col-span-5">
+                    <h1 class="text-3xl text-white font-bold">Spectra</h1>
+                 <a href="https://vallem.com" target="_blank" class="text-white font-bold -mt-1 hover:underline">Vallem</a>
+                </div>
+                <div class="col-span-2 col-start-11 grid justify-end">
+                    <a href="https://github.com/VallemSec/Spectra" target="_blank" class="grid self-center">
+                        <img class="h-8" src="img/github.svg">
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="grid container min-h-[90vh]">
+            <form class="relative grid justify-center content-center" action="results.html" method="get">
+                <label class="text-center text-2xl font-bold mb-2" for="domain">Scan je domein</label>
+                <div class="relative grid min-w-72 lg:min-w-[500px]">
+                    <input class="border-2 rounded-md px-3 py-2 pr-7 border-gray-500 shadow-box text-xl" type="text" id="domain" name="domain" placeholder="ismijnbedrijfveilig.nl" required>
+                    <button class="absolute right-2 self-center hover:scale-110 transition-all">
+                        <img src="img/arrow.svg" class="w-8">
+                    </button>
+                </div>
+                <a class="justify-self-center absolute bottom-4" href="#scrollTo">
+                    <img class="w-10" src="img/arrow-down.svg">
+                </a>
             </form>
-            <div id="output"></div>
-        </section>
+        </div>
+        <div class="container !mb-20 !mt-10">
+            <div class="grid grid-cols-12 gap-7 pt-10" id="scrollTo">
+                <div class="col-span-12 lg:col-span-6 my-auto">
+                    <h2 class="text-3xl pb-2 font-bold">
+                        Sample text
+                    </h2>
+                    <p>
+                        Lorem ipsum dolor sit amet consectetur adipisicing elit. Nostrum porro, id a amet sunt architecto rerum, nemo natus tempore accusamus aliquam iure. Tempora officia harum consequatur quos, assumenda quasi hic odio fuga vel nemo esse temporibus, blanditiis perferendis animi unde quibusdam repellat nulla voluptatibus facilis. Distinctio incidunt alias aliquid eligendi.
+                    </p>
+                </div>
+                <div class="col-span-12 lg:col-span-6">
+                    <img class="w-full rounded-md max-h-72 lg:max-h-max object-cover" src="img/placeholder.jpg">
+                </div>
+            </div>
+        </div>
+        <div class="container !my-20">
+            <h2 class="flex gap-x-2 font-bold text-4xl mb-2"><img src="img/news.svg" alt=""> Laatste nieuws</h2>
+            <div id="blogposts" class="grid grid-cols-12 gap-7">
+            </div>
+        </div>
+        <div class="container !my-20">
+            <div class="grid grid-cols-12 gap-7">
+                <div class="col-span-12 lg:col-span-6">
+                    <img class="w-full rounded-md max-h-72 lg:max-h-max object-cover" src="img/placeholder.jpg">
+                </div>
+                <div class="col-span-12 lg:col-span-6 my-auto">
+                    <h2 class="text-3xl pb-2 font-bold">
+                        Sample text
+                    </h2>
+                    <p>
+                        Lorem ipsum dolor sit amet consectetur adipisicing elit. Nostrum porro, id a amet sunt architecto rerum, nemo natus tempore accusamus aliquam iure. Tempora officia harum consequatur quos, assumenda quasi hic odio fuga vel nemo esse temporibus, blanditiis perferendis animi unde quibusdam repellat nulla voluptatibus facilis. Distinctio incidunt alias aliquid eligendi.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="container !my-20">
+            <h2 class="text-3xl font-bold mb-2">Volg ons op</h2>
+            <div class="bg-gray-300 rounded-md p-5 flex gap-x-5 justify-center">
+                <a href="https://vallem.com" target="_blank" class="grid bg-gray-900 rounded-md aspect-square w-24 hover:scale-110 transition-all duration-150 relative">
+                    <img class="justify-self-center self-center w-6 md:w-auto" src="img/vallem.svg">
+                </a>
+                <a href="https://www.youtube.com/@VallemSecurity" target="_blank" class="grid bg-gray-900 rounded-md aspect-square w-24 hover:scale-110 transition-all duration-150 relative">
+                    <img class="justify-self-center self-center w-6 md:w-auto" src="img/youtube.svg">
+                </a>
+                <a href="https://www.facebook.com/people/Vallem/61557695083455/" target="_blank" class="grid bg-gray-900 rounded-md aspect-square w-24 hover:scale-110 transition-all duration-150 relative">
+                    <img class="justify-self-center self-center w-6 md:w-auto" src="img/facebook.svg">
+                </a>
+                <a href="https://www.instagram.com/vallemsecurity/" target="_blank" class="grid bg-gray-900 rounded-md aspect-square w-24 hover:scale-110 transition-all duration-150 relative">
+                    <img class="justify-self-center self-center w-6 md:w-auto" src="img/instagram.svg">
+                </a>
+                <a href="https://www.linkedin.com/company/vallemsecurity/" target="_blank" class="grid bg-gray-900 rounded-md aspect-square w-24 hover:scale-110 transition-all duration-150 relative">
+                    <img class="justify-self-center self-center w-6 md:w-auto" src="img/linkedin.svg">
+                </a>
+            </div>
+        </div>
+        <footer class="bg-gray-900 py-2 mt-5">
+            <p class="text-white text-center">Proudly presented by <a href="https://vallem.com" class="underline hover:text-blue-vallem" target="_blank">Vallem</a></p>
+        </footer>
     </body>
 </html>

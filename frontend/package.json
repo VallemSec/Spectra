@@ -4,11 +4,8 @@
   "description": "Vallem Front-end",
   "author": "Chiel Suttorp",
   "scripts": {
-    "dev": "npx parcel src/index.html",
-    "build": "npx parcel build src/index.html && docker compose up -d"
-  },
-  "engines": {
-    "node": ">=16.0.0"
+    "dev": "npx parcel src/*.html --no-cache",
+    "build": "npx parcel build src/*.html --no-cache && docker compose up -d"
   },
   "devDependencies": {
     "@parcel/transformer-sass": "^2.13",
@@ -26,5 +23,9 @@
     "vm-browserify": "^1.1.2"
   },
   "dependencies": {
+    "chart.js": "^4.4.7",
+    "dotenv": "^16.4.7",
+    "tippy.js": "^6.3.7",
+    "typed.js": "^2.1.0"
   }
 }
