@@ -33,6 +33,8 @@ class AI:
 
     def generate_category_ai_advice(self, errors: list[str]) -> str:
         # Generate an ELIA5 description for a single error
+        if self._prompts.get("category_prompt") is None:
+            return ""
         response = self._client.chat.completions.create(
             model=self._model,
             messages=[{
@@ -52,6 +54,8 @@ class AI:
 
     def generate_complete_ai_advice(self, category_advices: list[str]) -> str:
         # Generate an ELIA5 report for everything in general
+        if self._prompts.get("summary_prompt") is None:
+            return ""
         response = self._client.chat.completions.create(
             model=self._model,
             messages=[{
