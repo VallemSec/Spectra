@@ -79,21 +79,21 @@ def load_endpoint(request_id: str) -> tuple[str, int]:
         DecodyDatabaseResultFormat(
             category=rule["category"],
             rule_name=rule["name"],
-            rule_explanation=rule["explanation"],
+            rule_explanation=rule["explanation"] if safe_eval(
+                rule["condition"],
+                {
+                    "short": result["short"],
+                    "long": result["long"],
+                    "scanner_name": request_body["scanner_name"]
+                },
+                quiet=True
+            ) else "",
             scanner_name=request_body["scanner_name"],
             long_input=result["long"],
             short_input=result["short"]
         )
         for rule in rules
         for result in request_body["results"]
-        if safe_eval(
-            rule["condition"],
-            {
-                "short": result["short"],
-                "long": result["long"],
-                "scanner_name": request_body["scanner_name"]
-            }
-        )
     ])
     logger.debug("Appended to aggregated results")
 
