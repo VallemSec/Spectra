@@ -99,7 +99,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 	config := copyConfig()
 	requestLogger.Trace("Created copy of the config")
 
-	runRunnersConcurrently(config.DiscoveryRunners, config, jsonBody, decodyId, w, &wg, prevScans, requestLogger)
+	runRunnersSynchronously(config.DiscoveryRunners, config, jsonBody, decodyId, w, &wg, prevScans, requestLogger)
 	runRunnersConcurrently(config.AlwaysRun, config, jsonBody, decodyId, w, &wg, prevScans, requestLogger)
 
 	wg.Wait()
@@ -164,6 +164,22 @@ func runRunnersConcurrently(runners []string, config types.ConfigFile, jsonBody 
 
 			logger.Info("runFromConfig: ", fromConfig)
 		}(runnerName)
+	}
+}
+
+func runRunnersSynchronously(runners []string, config types.ConfigFile, jsonBody types.JSONbody, decodyId string, w http.ResponseWriter, wg *sync.WaitGroup, prevScans []types.RunnerConfig, logger *logrus.Entry) {
+	for _, runnerName := range runners {
+		runner := config.Runners[runnerName]
+
+		fromConfig, err := runScan(runner, jsonBody.Target, decodyId, config, nil, prevScans, logger)
+		if err != nil {
+			logger.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			return
+		}
+
+		logger.Info("runFromConfig: ", fromConfig)
 	}
 }
 
