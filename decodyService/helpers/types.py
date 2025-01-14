@@ -25,6 +25,8 @@ class DecodyDatabaseResultFormat(TypedDict):
     rule_name: str
     rule_explanation: str
     scanner_name: str
+    long_input: str
+    short_input: str
 
 
 class DecodyFindingsOutputFormat(TypedDict):

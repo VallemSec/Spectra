@@ -80,7 +80,9 @@ def load_endpoint(request_id: str) -> tuple[str, int]:
             category=rule["category"],
             rule_name=rule["name"],
             rule_explanation=rule["explanation"],
-            scanner_name=request_body["scanner_name"]
+            scanner_name=request_body["scanner_name"],
+            long_input=result["long"],
+            short_input=result["short"]
         )
         for rule in rules
         for result in request_body["results"]
