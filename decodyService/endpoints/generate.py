@@ -15,13 +15,14 @@ logger = logging.getLogger(__name__)
 
 
 class AIAdvice:
-    def __init__(self, findings: list[str], ai: AI):
+    def __init__(self, findings: list[str], explanations: list[str], ai: AI):
         self.findings = findings
+        self.explanations = explanations
         self.ai = ai
         self.advice = None
 
     def generate(self):
-        self.advice = self.ai.generate_category_ai_advice(self.findings)
+        self.advice = self.ai.generate_category_ai_advice(self.findings, self.explanations)
 
 
 @generate_app.get("/generate/<request_id>")
@@ -37,28 +38,26 @@ def generate_endpoint(request_id: str):
     db_entry = Database.KeyStorage.get(f"{request_id}-results")
     if db_entry is None:
         logger.error("request_id '%s' not found", request_id)
-        return "request_id not found", 404
+        return "request_id not found, likely no scans reported", 404
     db_results: list[DecodyDatabaseResultFormat] = json.loads(db_entry)
 
-    category_findings: defaultdict[str, list[DecodyFindingsOutputFormat]] = defaultdict(list)
+    # Sort all database findings into lists with their respective category
+    category_findings: defaultdict[str, list[DecodyDatabaseResultFormat]] = defaultdict(list)
     for result in db_results:
-        category_findings[result["category"]].append(
-            DecodyFindingsOutputFormat(
-                rule_name=result["rule_name"],
-                rule_explanation=result["rule_explanation"],
-                scanner_name=result["scanner_name"]
-            )
-        )
+        category_findings[result["category"]].append(result)
 
+    # Load the AI prompts from the DB
     db_prompts = Database.KeyStorage.get("decody-prompts")
     if db_prompts is None:
         return "", 500
     prompts: DecodyPromptFormat = json.loads(db_prompts)
     ai = AI(prompts)
 
+    # Start all AI requests in parallel
     threads = []
     for category, findings in category_findings.items():
-        ai_thread = AIAdvice([i["rule_explanation"] for i in findings], ai)
+        ai_thread = AIAdvice([i["long_input"] for i in findings],
+                             [i["rule_explanation"] for i in findings], ai)
         thread = threading.Thread(target=ai_thread.generate)
         threads.append({
             "thread": thread,
@@ -74,6 +73,7 @@ def generate_endpoint(request_id: str):
             if not thread["thread"].is_alive():
                 thread_active[i] = False
 
+    # Format the AI output into the wished for format
     results: list[DecodyCategoryOutputFormat] = list()
     for thread in threads:
         ai_thread = thread["ai"]

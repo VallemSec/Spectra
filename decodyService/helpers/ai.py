@@ -31,7 +31,7 @@ class AI:
             api_key=self._api_key, base_url=self._url, timeout=30)
         self._prompts = prompts
 
-    def generate_category_ai_advice(self, errors: list[str]) -> str:
+    def generate_category_ai_advice(self, findings: list[str], explanations: list[str]) -> str:
         # Generate an ELIA5 description for a single error
         if self._prompts.get("category_prompt") is None:
             return ""
@@ -42,10 +42,11 @@ class AI:
                 "content": [
                     {
                         "type": "text",
-                        # "text": "Explain the errors like I am five but in Dutch"
+                        # "text": "Explain the findings like I am five but in Dutch"
                         "text": self._prompts["category_prompt"]
                     },
-                    {"type": "text", "text": json.dumps(errors)}
+                    {"type": "text", "text": json.dumps(findings)},
+                    {"type": "text", "text": json.dumps(explanations)}
                 ]
             }]
         )
