@@ -31,7 +31,9 @@ class AI:
             api_key=self._api_key, base_url=self._url, timeout=30)
         self._prompts = prompts
 
-    def generate_category_ai_advice(self, findings: list[str], explanations: list[str]) -> str:
+    def generate_category_ai_advice(self,
+                                    findings: list[str],
+                                    explanations: list[str]) -> str:
         # Generate an ELIA5 description for a single error
         if self._prompts.get("category_prompt") is None:
             return ""

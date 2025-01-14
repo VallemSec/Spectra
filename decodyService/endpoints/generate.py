@@ -7,8 +7,12 @@ import json
 
 from helpers import Database, AI
 from helpers.types import (
-    DecodyDatabaseResultFormat, DecodyCategoryOutputFormat,
-    DecodyFindingsOutputFormat, DecodyPromptFormat)
+    DecodyDatabaseResultFormat, DecodyCategoryOutputFormat, DecodyPromptFormat)
+
+# Constants for string literals and HTTP status codes
+RESULTS_SUFFIX = "-results"
+HTTP_NOT_FOUND = 404
+HTTP_INTERNAL_SERVER_ERROR = 500
 
 generate_app = Blueprint("generate_app", __name__)
 logger = logging.getLogger(__name__)
@@ -22,7 +26,8 @@ class AIAdvice:
         self.advice = None
 
     def generate(self):
-        self.advice = self.ai.generate_category_ai_advice(self.findings, self.explanations)
+        self.advice = self.ai.generate_category_ai_advice(self.findings,
+                                                          self.explanations)
 
 
 @generate_app.get("/generate/<request_id>")
@@ -35,21 +40,22 @@ def generate_endpoint(request_id: str):
     :return: 200 and a JSON object containing AI advice
     and findings for a given request ID.
     """
-    db_entry = Database.KeyStorage.get(f"{request_id}-results")
+    db_entry = Database.KeyStorage.get(f"{request_id}{RESULTS_SUFFIX}")
     if db_entry is None:
         logger.error("request_id '%s' not found", request_id)
-        return "request_id not found, likely no scans reported", 404
+        return "request_id not found, likely no scans reported", HTTP_NOT_FOUND
     db_results: list[DecodyDatabaseResultFormat] = json.loads(db_entry)
 
     # Sort all database findings into lists with their respective category
-    category_findings: defaultdict[str, list[DecodyDatabaseResultFormat]] = defaultdict(list)
+    category_findings: defaultdict[
+        str, list[DecodyDatabaseResultFormat]] = defaultdict(list)
     for result in db_results:
         category_findings[result["category"]].append(result)
 
     # Load the AI prompts from the DB
     db_prompts = Database.KeyStorage.get("decody-prompts")
     if db_prompts is None:
-        return "", 500
+        return "", HTTP_INTERNAL_SERVER_ERROR
     prompts: DecodyPromptFormat = json.loads(db_prompts)
     ai = AI(prompts)
 

@@ -23,9 +23,9 @@ class TestLoadEndpoint(unittest.TestCase):
             with app.test_client() as client:
                 request_id = "123"
                 response = client.post(f"/load/{request_id}", json={
-                    "name": "test",
+                    "scanner_name": "test",
                     "rules": ["rule1.json"],
-                    "results": [{"short": "error1"}]
+                    "results": [{"short": "error1", "long": "error1"}]
                 })
             self.assertEqual(response.status_code, 201)
             mock_set.assert_any_call(f"{request_id}-input", mock.ANY)
