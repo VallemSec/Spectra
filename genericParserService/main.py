@@ -1,6 +1,9 @@
 import logging
 import sys
 
+import pymysql
+
+import helpers
 from lua_parser import Parser, ParserFinder
 from dotenv import load_dotenv
 import argparse
@@ -11,22 +14,25 @@ import os
 load_dotenv()
 
 PARSER_FOLDER = os.getenv("PARSER_FOLDER")
+SQL_STRING = os.getenv("SQL_STRING")
 if PARSER_FOLDER is None:
     raise ValueError("PARSER_FOLDER environment variable is not set")
 if not os.path.exists(PARSER_FOLDER):
     raise ValueError("Expected PARSER_FOLDER to be an existing path")
+if SQL_STRING is None:
+    raise ValueError("SQL_STRING environment variable is not set")
 
+
+connection = pymysql.connect(**helpers.convert_sql_str_to_connect_obj(SQL_STRING))
 
 parser = argparse.ArgumentParser()
 parser.add_argument("name", help="Name to give to the output")
 parser.add_argument("target",
                     help="""Which parser file(s) to use.
                     You can specify either a file or directory""")
-parser.add_argument("input", help="STDOUT of filepath of the tools that you want to parse")
+parser.add_argument("database_key", help="Key of the entry in the database. Format is 'parser-<UUID>'")
 parser.add_argument("-v", "--verbose", action="store_true",
                     help="Enable verbose output, aka loglevel DEBUG")
-parser.add_argument("-f", "--file", action="store_true",
-                    help="Signal that the input should be loaded from a file")
 
 args = parser.parse_args()
 
@@ -41,12 +47,12 @@ logging.basicConfig(
 pf = ParserFinder(args.target, PARSER_FOLDER)
 
 lua_parser_threads = []
-input_file_content = ""
-if args.file:
-    with open(args.input, "r") as f:
-        input_file_content = f.read()
+database_input = ""
 for parser_file in pf.yield_parsers():
-    lua_parser = Parser(parser_file, input_file_content if args.file else args.input)
+    c = connection.cursor()
+    c.execute("SELECT kv.value FROM key_value kv WHERE kv.key = %s", args.database_key)
+    database_input = c.fetchone()["value"]
+    lua_parser = Parser(parser_file, database_input)
     thread = threading.Thread(target=lua_parser.parse)
     lua_parser_threads.append({"thread": thread, "parser": lua_parser})
     thread.start()
