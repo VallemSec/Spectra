@@ -7,6 +7,8 @@ import (
 
 type JSONbody struct {
 	Target string `json:"target"`
+	// email is optional
+	Email string `json:"email,omitempty"`
 }
 
 type ConfigFile struct {
@@ -90,4 +92,10 @@ type DecodyInput struct {
 	Name    string   `json:"scanner_name"`
 	Rules   []string `json:"rules"`
 	Results []Result `json:"results"`
+}
+
+type EmailReturn struct {
+	Service string `json:"service"`
+	Date    string `json:"date"`
+	Icon    string `json:"icon"`
 }

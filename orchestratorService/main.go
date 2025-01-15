@@ -84,6 +84,12 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if jsonBody.Email != "" {
+		emailLeaks := checkEmailLeak(jsonBody.Email)
+		json.NewEncoder(w).Encode(emailLeaks)
+		return
+	}
+
 	jsonBody.Target, err = utils.NormalizeTarget(jsonBody.Target)
 	if err != nil {
 		log.Error(err)
@@ -114,6 +120,50 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 
 	io.Copy(w, resp.Body)
 	requestLogger.Info("Finished running all scans")
+}
+
+func checkEmailLeak(email string) []types.EmailReturn {
+	// call leakcheck.io with the email
+	req, err := http.NewRequest("GET", "https://leakcheck.io/api/public", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	q := req.URL.Query()
+	q.Add("check", email)
+	req.URL.RawQuery = q.Encode()
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+
+	type LeakCheckResponse struct {
+		Success bool     `json:"success"`
+		Fields  []string `json:"fields"`
+		Sources []struct {
+			Name string `json:"name"`
+			Date string `json:"date"`
+		} `json:"sources"`
+	}
+
+	var leakCheckResponse LeakCheckResponse
+	err = json.NewDecoder(resp.Body).Decode(&leakCheckResponse)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if leakCheckResponse.Success {
+		var returnList []types.EmailReturn
+		for _, field := range leakCheckResponse.Sources {
+			returnList = append(returnList, types.EmailReturn{
+				Service: field.Name,
+				Date:    field.Date,
+			})
+		}
+
+		return returnList
+	}
+
+	return []types.EmailReturn{}
 }
 
 func copyConfig() types.ConfigFile {
