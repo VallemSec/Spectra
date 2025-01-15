@@ -123,6 +123,13 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func checkEmailLeak(email string) []types.EmailReturn {
+	email = strings.ToLower(email)
+
+	// create a SHA256 hash of the email to prevent it from being stored by leakcheck.io
+	h := sha256.New()
+	h.Write([]byte(email))
+	email = fmt.Sprintf("%x", h.Sum(nil))
+
 	// call leakcheck.io with the email
 	req, err := http.NewRequest("GET", "https://leakcheck.io/api/public", nil)
 	if err != nil {
