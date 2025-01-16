@@ -7,8 +7,6 @@ import (
 
 type JSONbody struct {
 	Target string `json:"target"`
-	// email is optional
-	Email string `json:"email,omitempty"`
 }
 
 type ConfigFile struct {

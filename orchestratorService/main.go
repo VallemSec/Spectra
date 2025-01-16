@@ -51,6 +51,7 @@ func init() {
 func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", corsMiddleware(handleRequest))
+	mux.HandleFunc("/emailLeaks", corsMiddleware(emailCheck))
 
 	if err := http.ListenAndServe(":8080", mux); err != nil {
 		log.Fatal(err)
@@ -72,6 +73,25 @@ func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+func emailCheck(w http.ResponseWriter, r *http.Request) {
+	// type for the json body
+	var jsonBody struct {
+		Email string `json:"email"`
+	}
+
+	// decode the json body
+	err := json.NewDecoder(r.Body).Decode(&jsonBody)
+	if err != nil {
+		log.Error(err)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Please send the email in the body"})
+		return
+	}
+
+	emailLeaks := checkEmailLeak(jsonBody.Email)
+	json.NewEncoder(w).Encode(emailLeaks)
+}
+
 func handleRequest(w http.ResponseWriter, r *http.Request) {
 	var jsonBody types.JSONbody
 	var prevScans []types.RunnerConfig
@@ -81,12 +101,6 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 		log.Error(err)
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-		return
-	}
-
-	if jsonBody.Email != "" {
-		emailLeaks := checkEmailLeak(jsonBody.Email)
-		json.NewEncoder(w).Encode(emailLeaks)
 		return
 	}
 
