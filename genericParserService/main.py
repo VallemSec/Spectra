@@ -14,16 +14,16 @@ import os
 load_dotenv()
 
 PARSER_FOLDER = os.getenv("PARSER_FOLDER")
-SQL_STRING = os.getenv("SQL_STRING")
+SQL_CONN_STRING = os.getenv("SQL_CONN_STRING")
 if PARSER_FOLDER is None:
     raise ValueError("PARSER_FOLDER environment variable is not set")
 if not os.path.exists(PARSER_FOLDER):
     raise ValueError("Expected PARSER_FOLDER to be an existing path")
-if SQL_STRING is None:
+if SQL_CONN_STRING is None:
     raise ValueError("SQL_STRING environment variable is not set")
 
 
-connection = pymysql.connect(**helpers.convert_sql_str_to_connect_obj(SQL_STRING))
+connection = pymysql.connect(**helpers.convert_sql_str_to_connect_obj(SQL_CONN_STRING))
 
 parser = argparse.ArgumentParser()
 parser.add_argument("name", help="Name to give to the output")

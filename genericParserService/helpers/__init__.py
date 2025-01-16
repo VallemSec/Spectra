@@ -5,7 +5,7 @@ import pymysql.cursors
 
 def convert_sql_str_to_connect_obj(sql_str: str) -> dict[str, Any]:
     # Regex matches the pattern username:password@host:port/database
-    pattern = re.compile(r"([:ascii:]+):(.+)@([\w\d\.-_]+):(\d{1,5})/([\w_-]+)")
+    pattern = re.compile(r"(.+):(.+)@([\w\d\.-_]+):(\d{1,5})/([\w_-]+)")
     match = pattern.fullmatch(sql_str)
     groups = match.groups()
     return {
