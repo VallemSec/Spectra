@@ -1,9 +1,10 @@
 {$DOMAIN} {
-	handle_path /ui/* {
-		root * /fe
-		file_server
+	root * /fe
+	file_server
+
+	handle_path /api* {
+		reverse_proxy orchestrator:8080
 	}
-	reverse_proxy orchestrator:8080
 }
 
 docs.{$DOMAIN} {
