@@ -91,3 +91,9 @@ type DecodyInput struct {
 	Rules   []string `json:"rules"`
 	Results []Result `json:"results"`
 }
+
+type EmailReturn struct {
+	Service string `json:"service"`
+	Date    string `json:"date"`
+	Icon    string `json:"icon"`
+}

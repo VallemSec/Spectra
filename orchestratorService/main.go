@@ -53,6 +53,7 @@ func init() {
 func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", corsMiddleware(handleRequest))
+	mux.HandleFunc("/emailLeaks", corsMiddleware(emailCheck))
 
 	if err := http.ListenAndServe(":8080", mux); err != nil {
 		log.Fatal(err)
@@ -72,6 +73,25 @@ func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 		next(w, r)
 	}
+}
+
+func emailCheck(w http.ResponseWriter, r *http.Request) {
+	// type for the json body
+	var jsonBody struct {
+		Email string `json:"email"`
+	}
+
+	// decode the json body
+	err := json.NewDecoder(r.Body).Decode(&jsonBody)
+	if err != nil {
+		log.Error(err)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Please send the email in the body"})
+		return
+	}
+
+	emailLeaks := checkEmailLeak(jsonBody.Email)
+	json.NewEncoder(w).Encode(emailLeaks)
 }
 
 func handleRequest(w http.ResponseWriter, r *http.Request) {
@@ -116,6 +136,57 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 
 	io.Copy(w, resp.Body)
 	requestLogger.Info("Finished running all scans")
+}
+
+func checkEmailLeak(email string) []types.EmailReturn {
+	email = strings.ToLower(email)
+
+	// create a SHA256 hash of the email to prevent it from being stored by leakcheck.io
+	h := sha256.New()
+	h.Write([]byte(email))
+	email = fmt.Sprintf("%x", h.Sum(nil))
+
+	// call leakcheck.io with the email
+	req, err := http.NewRequest("GET", "https://leakcheck.io/api/public", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	q := req.URL.Query()
+	q.Add("check", email)
+	req.URL.RawQuery = q.Encode()
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+
+	type LeakCheckResponse struct {
+		Success bool     `json:"success"`
+		Fields  []string `json:"fields"`
+		Sources []struct {
+			Name string `json:"name"`
+			Date string `json:"date"`
+		} `json:"sources"`
+	}
+
+	var leakCheckResponse LeakCheckResponse
+	err = json.NewDecoder(resp.Body).Decode(&leakCheckResponse)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if leakCheckResponse.Success {
+		var returnList []types.EmailReturn
+		for _, field := range leakCheckResponse.Sources {
+			returnList = append(returnList, types.EmailReturn{
+				Service: field.Name,
+				Date:    field.Date,
+			})
+		}
+
+		return returnList
+	}
+
+	return []types.EmailReturn{}
 }
 
 func copyConfig() types.ConfigFile {
