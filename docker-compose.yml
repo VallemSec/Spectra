@@ -1,3 +1,7 @@
+networks:
+  spectra:
+    external: true
+
 volumes:
   mariadb_volume:
   caddy_data:
@@ -27,6 +31,9 @@ services:
     volumes: 
       - ./sqlScripts:/docker-entrypoint-initdb.d
       - mariadb_volume:/var/lib/mysql
+    networks:
+      spectra:
+        ipv4_address: 172.20.0.50
 
   orchestrator:
     image: ghcr.io/vallemsec/spectra/orchestrator
