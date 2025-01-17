@@ -82,6 +82,7 @@ type RunnerJSON struct {
 	ContainerTag     string   `json:"containerTag"`
 	ContainerCommand []string `json:"containerCommand"`
 	Volumes          []string `json:"volume"`
+	Networks         []string `json:"network"`
 	Env              []string `json:"env"`
 	Tty              bool     `json:"tty"`
 }

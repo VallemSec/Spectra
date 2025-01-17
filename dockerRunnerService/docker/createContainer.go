@@ -12,7 +12,7 @@ import (
 	"os"
 )
 
-func CreateContainer(containerName, containerTag string, containerCommand, volumes, env []string, tty bool) (string, string, error) {
+func CreateContainer(containerName, containerTag string, containerCommand, volumes, networks, env []string, tty bool) (string, string, error) {
 	fmt.Println("Creating container", containerName+":"+containerTag)
 
 	ctx := context.Background()
@@ -41,7 +41,7 @@ func CreateContainer(containerName, containerTag string, containerCommand, volum
 		io.Copy(os.Stdout, reader)
 	}
 
-	stdoutBuff, stderrBuff, containerId, err := StartAndReadLogs(ctx, cli, imageName, containerCommand, volumes, env, tty)
+	stdoutBuff, stderrBuff, containerId, err := StartAndReadLogs(ctx, cli, imageName, containerCommand, volumes, networks, env, tty)
 	if err != nil {
 		return "", "", err
 	}

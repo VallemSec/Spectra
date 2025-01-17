@@ -6,7 +6,7 @@ import (
 )
 
 func TestBasicHelloWorld(t *testing.T) {
-	stdout, _, err := CreateContainer("hello-world", "latest", []string{}, []string{}, []string{}, false)
+	stdout, _, err := CreateContainer("hello-world", "latest", []string{}, []string{}, []string{}, []string{}, false)
 	if err != nil {
 		t.Errorf("Error creating container: %v", err)
 	}
