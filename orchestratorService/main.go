@@ -332,7 +332,7 @@ func runScan(rf types.RunnerConfig, t, decodyId string, cf types.ConfigFile, res
 
 	joinedSr := strings.Join(sr, "\n")
 
-	pr, err := sendResultToParser(rf, joinedSr, logger)
+	pr, err := sendResultToParser(rf, sr, logger)
 	if err != nil {
 		return "", err
 	}
@@ -380,9 +380,11 @@ func runDockerService(runConf types.RunnerConfig, volumes, networks, env []strin
 	return body.Stdout, fmt.Errorf(strings.Join(body.Stderr, "\n"))
 }
 
-func sendResultToParser(runConf types.RunnerConfig, containerOutput string, logger *logrus.Entry) (types.ParserOutputJson, error) {
+func sendResultToParser(runConf types.RunnerConfig, containerOutput []string, logger *logrus.Entry) (types.ParserOutputJson, error) {
 	// Clean the output of the container
-	containerOutput = utils.CleanControlCharacters(containerOutput)
+	for i, _ := range containerOutput {
+		containerOutput[i] = utils.CleanControlCharacters(containerOutput[i])
+	}
 
 	sqlConn, err := parser.Connect(os.Getenv("PARSER_DATABASE_USER"), os.Getenv("PARSER_DATABASE_PASSWORD"), os.Getenv("PARSER_DATABASE_HOST"), os.Getenv("PARSER_DATABASE_PORT"), os.Getenv("PARSER_DATABASE_NAME"))
 	if err != nil {
@@ -394,7 +396,12 @@ func sendResultToParser(runConf types.RunnerConfig, containerOutput string, logg
 
 	connString := parser.GenerateConn(os.Getenv("PARSER_DATABASE_USER"), os.Getenv("PARSER_DATABASE_PASSWORD"), os.Getenv("PARSER_DATABASE_HOST"), os.Getenv("PARSER_DATABASE_PORT"), os.Getenv("PARSER_DATABASE_NAME"))
 
-	insertedUuid, err := parser.InsertResult(sqlConn, containerOutput)
+	formattedResult, err := json.Marshal(containerOutput)
+	if err != nil {
+		logger.Error("Error marshalling containerOutput:", err)
+		return types.ParserOutputJson{}, err
+	}
+	insertedUuid, err := parser.InsertResult(sqlConn, string(formattedResult))
 	if err != nil {
 		logger.Error("Error inserting result into the database:", err)
 		return types.ParserOutputJson{}, err
@@ -412,7 +419,7 @@ func sendResultToParser(runConf types.RunnerConfig, containerOutput string, logg
 			Message    string `json:"message"`
 		}
 		var errOut errOutType
-		if err := json.Unmarshal([]byte(containerOutput), &errOut); err != nil {
+		if err := json.Unmarshal([]byte(strings.Join(serviceOut, " ")), &errOut); err != nil {
 			return types.ParserOutputJson{}, err
 		}
 
