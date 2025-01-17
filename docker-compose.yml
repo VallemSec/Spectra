@@ -34,6 +34,7 @@ services:
     networks:
       spectra:
         ipv4_address: 172.20.0.50
+      default:
 
   orchestrator:
     image: ghcr.io/vallemsec/spectra/orchestrator
@@ -41,6 +42,9 @@ services:
     env_file: .env
     volumes:
       - ./orchestrator-config.yaml:/app/config.yaml
+    networks:
+      spectra:
+      default:
 
   decody:
     image: ghcr.io/vallemsec/spectra/decody
