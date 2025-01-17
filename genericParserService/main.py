@@ -1,6 +1,9 @@
 import logging
 import sys
 
+import pymysql
+
+import helpers
 from lua_parser import Parser, ParserFinder
 from dotenv import load_dotenv
 import argparse
@@ -11,18 +14,23 @@ import os
 load_dotenv()
 
 PARSER_FOLDER = os.getenv("PARSER_FOLDER")
+SQL_CONN_STRING = os.getenv("SQL_CONN_STRING")
 if PARSER_FOLDER is None:
     raise ValueError("PARSER_FOLDER environment variable is not set")
 if not os.path.exists(PARSER_FOLDER):
     raise ValueError("Expected PARSER_FOLDER to be an existing path")
+if SQL_CONN_STRING is None:
+    raise ValueError("SQL_STRING environment variable is not set")
 
+
+connection = pymysql.connect(**helpers.convert_sql_str_to_connect_obj(SQL_CONN_STRING))
 
 parser = argparse.ArgumentParser()
 parser.add_argument("name", help="Name to give to the output")
 parser.add_argument("target",
                     help="""Which parser file(s) to use.
                     You can specify either a file or directory""")
-parser.add_argument("input", help="STDOUT of the tools that you want to parse")
+parser.add_argument("database_key", help="Key of the entry in the database. Format is 'parser-<UUID>'")
 parser.add_argument("-v", "--verbose", action="store_true",
                     help="Enable verbose output, aka loglevel DEBUG")
 
@@ -39,8 +47,12 @@ logging.basicConfig(
 pf = ParserFinder(args.target, PARSER_FOLDER)
 
 lua_parser_threads = []
+database_input = ""
 for parser_file in pf.yield_parsers():
-    lua_parser = Parser(parser_file, args.input)
+    c = connection.cursor()
+    c.execute("SELECT kv.value FROM key_value kv WHERE kv.key = %s", args.database_key)
+    database_input = c.fetchone()["value"]
+    lua_parser = Parser(parser_file, database_input)
     thread = threading.Thread(target=lua_parser.parse)
     lua_parser_threads.append({"thread": thread, "parser": lua_parser})
     thread.start()

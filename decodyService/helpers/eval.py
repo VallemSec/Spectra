@@ -11,7 +11,7 @@ Example:
 import ast
 
 
-def safe_eval(expr, variables=None) -> bool:
+def safe_eval(expr, variables=None, quiet: bool = False) -> bool:
     """
     This function evaluates a boolean expression using `eval`.
     It is known that `eval` is unsafe, but the use of it here is
@@ -19,6 +19,7 @@ def safe_eval(expr, variables=None) -> bool:
     :param expr: The boolean expression to be evaluated
     :param variables: A dictionary with the variable name as the key
     and the value as value
+    :param quiet: If `True`, return False instead of raising an exception
     :return: The result of the given expression
     """
     try:
@@ -33,4 +34,6 @@ def safe_eval(expr, variables=None) -> bool:
         return result
 
     except Exception as e:
+        if quiet:
+            return False
         raise ValueError(f"Error evaluating expression: {e}") from e

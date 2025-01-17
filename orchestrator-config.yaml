@@ -1,14 +1,28 @@
 discovery_runners:
+  - SUBFINDER
   - NMAP
 
 always_run:
 
-runners:
+runners:  
+  SUBFINDER:
+    cmdargs:
+      - "-duc"
+      - "-silent"
+      - "-d"
+      - "{{req_domain}}"
+    report: false
+    container_name: subfinder
+    image: projectdiscovery/subfinder
+    image_version: latest
+    parser_plugin: subfinder
+    results:
+
   NMAP:
     cmdargs:
       - "-t"
       - "quick"
-      - "{{req_domain}}"
+      - "{{[pass_results]}}"
     report: false
     container_name: nmap
     image: ghcr.io/vallemsec/spectra/portscanner
