@@ -323,7 +323,7 @@ func runScan(rf types.RunnerConfig, t, decodyId string, cf types.ConfigFile, res
 
 	logger.Info("Running scan: ", rf.ContainerName)
 	logger.Info("Args: ", rf.CmdArgs)
-	sr, err := runDockerService(rf, []string{}, []string{}, logger)
+	sr, err := runDockerService(rf, []string{}, []string{}, []string{}, logger)
 	if err != nil && (errors.Is(err, fmt.Errorf("")) || errors.Is(err, fmt.Errorf("  "))) {
 		fmt.Println("sr: ", sr)
 		fmt.Println("Error: ", err)
@@ -345,13 +345,14 @@ func runScan(rf types.RunnerConfig, t, decodyId string, cf types.ConfigFile, res
 }
 
 // this function kicks off a docker container with the given configuration and returns the output of the container
-func runDockerService(runConf types.RunnerConfig, volumes, env []string, logger *logrus.Entry) ([]string, error) {
+func runDockerService(runConf types.RunnerConfig, volumes, networks, env []string, logger *logrus.Entry) ([]string, error) {
 	logger.Info("Running docker service: ", runConf.Image, ":", runConf.ImageVersion, " with args: ", runConf.CmdArgs)
 	configJSON := types.RunnerJSON{
 		ContainerName:    runConf.Image,
 		ContainerTag:     runConf.ImageVersion,
 		ContainerCommand: runConf.CmdArgs,
 		Volumes:          volumes,
+		Networks:         networks,
 		Env:              env,
 		Tty:              runConf.Tty,
 	}
@@ -403,7 +404,7 @@ func sendResultToParser(runConf types.RunnerConfig, containerOutput string, logg
 		Image:        os.Getenv("PARSER_IMAGE"),
 		ImageVersion: os.Getenv("PARSER_VERSION"),
 		CmdArgs:      []string{runConf.ContainerName, runConf.ParserPlugin, insertedUuid},
-	}, []string{os.Getenv("PARSERS_FOLDER") + ":/parsers"}, []string{"PARSER_FOLDER=/parsers", "SQL_STRING=" + connString}, logger)
+	}, []string{os.Getenv("PARSERS_FOLDER") + ":/parsers"}, []string{"spectra"}, []string{"PARSER_FOLDER=/parsers", "SQL_STRING=" + connString}, logger)
 	if err != nil {
 		// unmarshal the output of the parser error to get what's inside logger_name
 		type errOutType struct {
