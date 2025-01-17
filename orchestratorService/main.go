@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 	"io"
+	"main/parser"
 	"net/http"
 	"os"
 	"regexp"
@@ -126,7 +128,10 @@ func copyConfig() types.ConfigFile {
 }
 
 func enforceEnvVars() {
-	envVariables := []string{"DOCKER_RUNNER_SERVICE", "CONFIG_FILE_PATH", "PARSERS_FOLDER", "PARSER_IMAGE", "PARSER_VERSION", "DECODY_SERVICE", "LOG_LEVEL"}
+	envVariables := []string{"DOCKER_RUNNER_SERVICE", "CONFIG_FILE_PATH",
+		"PARSERS_FOLDER", "PARSER_IMAGE", "PARSER_VERSION",
+		"PARSER_DATABASE_HOST", "PARSER_DATABASE_PORT", "PARSER_DATABASE_USER", "PARSER_DATABASE_PASSWORD", "PARSER_DATABASE_NAME",
+		"DECODY_SERVICE", "LOG_LEVEL"}
 	defaultValueVariables := map[string]string{
 		"DOCKER_RUNNER_SERVICE": "http://dockerrunner:8080",
 		"PARSER_IMAGE":          "ghcr.io/vallemsec/spectra/parser",
@@ -180,16 +185,6 @@ func runRunnersSynchronously(runners []string, config types.ConfigFile, jsonBody
 		}
 
 		logger.Info("runFromConfig: ", fromConfig)
-	}
-}
-
-func checkIfAllEnvVarsAreSet() {
-	envVariables := []string{"DOCKER_RUNNER_SERVICE", "CONFIG_FILE_PATH", "PARSERS_FOLDER", "PARSER_IMAGE", "PARSER_VERSION", "DECODY_SERVICE"}
-
-	for _, envVar := range envVariables {
-		if os.Getenv(envVar) == "" {
-			log.Fatalf("%s environment variable is not set, exiting....", envVar)
-		}
 	}
 }
 
@@ -258,7 +253,9 @@ func runScan(rf types.RunnerConfig, t, decodyId string, cf types.ConfigFile, res
 	logger.Info("Running scan: ", rf.ContainerName)
 	logger.Info("Args: ", rf.CmdArgs)
 	sr, err := runDockerService(rf, []string{}, []string{}, logger)
-	if err != nil {
+	if err != nil && (errors.Is(err, fmt.Errorf("")) || errors.Is(err, fmt.Errorf("  "))) {
+		fmt.Println("sr: ", sr)
+		fmt.Println("Error: ", err)
 		return "", err
 	}
 
@@ -315,11 +312,27 @@ func sendResultToParser(runConf types.RunnerConfig, containerOutput string, logg
 	// Clean the output of the container
 	containerOutput = utils.CleanControlCharacters(containerOutput)
 
+	sqlConn, err := parser.Connect(os.Getenv("PARSER_DATABASE_USER"), os.Getenv("PARSER_DATABASE_PASSWORD"), os.Getenv("PARSER_DATABASE_HOST"), os.Getenv("PARSER_DATABASE_PORT"), os.Getenv("PARSER_DATABASE_NAME"))
+	if err != nil {
+		logger.Error("Error connecting to the database:", err)
+		return types.ParserOutputJson{}, err
+	}
+
+	defer sqlConn.Close()
+
+	connString := parser.GenerateConn(os.Getenv("PARSER_DATABASE_USER"), os.Getenv("PARSER_DATABASE_PASSWORD"), os.Getenv("PARSER_DATABASE_HOST"), os.Getenv("PARSER_DATABASE_PORT"), os.Getenv("PARSER_DATABASE_NAME"))
+
+	insertedUuid, err := parser.InsertResult(sqlConn, containerOutput)
+	if err != nil {
+		logger.Error("Error inserting result into the database:", err)
+		return types.ParserOutputJson{}, err
+	}
+
 	serviceOut, err := runDockerService(types.RunnerConfig{
 		Image:        os.Getenv("PARSER_IMAGE"),
 		ImageVersion: os.Getenv("PARSER_VERSION"),
-		CmdArgs:      []string{runConf.ContainerName, runConf.ParserPlugin, containerOutput},
-	}, []string{os.Getenv("PARSERS_FOLDER") + ":/parsers"}, []string{"PARSER_FOLDER=/parsers"}, logger)
+		CmdArgs:      []string{runConf.ContainerName, runConf.ParserPlugin, insertedUuid},
+	}, []string{os.Getenv("PARSERS_FOLDER") + ":/parsers"}, []string{"PARSER_FOLDER=/parsers", "SQL_STRING=" + connString}, logger)
 	if err != nil {
 		// unmarshal the output of the parser error to get what's inside logger_name
 		type errOutType struct {
