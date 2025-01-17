@@ -17,6 +17,7 @@ func main() {
 			ContainerTag     string   `json:"containerTag"`
 			ContainerCommand []string `json:"containerCommand"`
 			Volume           []string `json:"volume"`
+			Networks         []string `json:"network"`
 			Env              []string `json:"env"`
 			Tty              bool     `json:"tty"`
 		}
@@ -37,10 +38,11 @@ func main() {
 		containerTag := reqBody.ContainerTag
 		containerCommand := reqBody.ContainerCommand
 		volumes := reqBody.Volume
+		networks := reqBody.Networks
 		env := reqBody.Env
 		tty := reqBody.Tty
 
-		stdout, stderr, err := docker.CreateContainer(containerName, containerTag, containerCommand, volumes, env, tty)
+		stdout, stderr, err := docker.CreateContainer(containerName, containerTag, containerCommand, volumes, networks, env, tty)
 		// log the error if there is any
 		if err != nil {
 			log.Println(err)

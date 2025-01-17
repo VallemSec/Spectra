@@ -5,6 +5,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	_ "github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"golang.org/x/net/context"
@@ -28,9 +29,18 @@ func CheckLocalImg(ctx context.Context, c *client.Client, iN string) (bool, erro
 	return false, nil
 }
 
-func StartAndReadLogs(ctx context.Context, c *client.Client, containerName string, containerCommand, volumes, envVars []string, tty bool) (*bytes.Buffer, *bytes.Buffer, string, error) {
+// Update StartAndReadLogs function in `docker/docker.go`
+func StartAndReadLogs(ctx context.Context, c *client.Client, containerName string, containerCommand, volumes, networks, envVars []string, tty bool) (*bytes.Buffer, *bytes.Buffer, string, error) {
 	hostConfig := &container.HostConfig{
 		Binds: volumes,
+	}
+
+	networkingConfig := &network.NetworkingConfig{
+		EndpointsConfig: make(map[string]*network.EndpointSettings),
+	}
+
+	for _, networkName := range networks {
+		networkingConfig.EndpointsConfig[networkName] = &network.EndpointSettings{}
 	}
 
 	resp, err := c.ContainerCreate(ctx, &container.Config{
@@ -38,7 +48,7 @@ func StartAndReadLogs(ctx context.Context, c *client.Client, containerName strin
 		Cmd:   containerCommand,
 		Tty:   tty,
 		Env:   envVars,
-	}, hostConfig, nil, nil, "")
+	}, hostConfig, networkingConfig, nil, "")
 	if err != nil {
 		return nil, nil, "", err
 	}
