@@ -30,16 +30,14 @@ runners:
     parser_plugin: nmap
     results:
       80:
-        - EXAMPLESCAN
+        - NUCLEI
 
-  EXAMPLESCAN:
+  NUCLEI:
     cmdargs:
       - "{{req_domain}}"
     report: true
-    container_name: examplescan
-    image: examplescan
+    container_name: nuclei
+    image: spectra/nuclei
     image_version: local
-    parser_plugin: examplescan.lua
-    decody_rule:
-      - examplescan_rules.yaml
+    parser_plugin: Nuclei
     results:
