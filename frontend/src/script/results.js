@@ -76,6 +76,38 @@ tippy('#disclaimer', {
         results = require('../testdata/testdata.json');
     }
 
+    // get email scan results
+    let emailresults;
+    if(urlParams.get('email') != "") {
+        // Fill email header
+        document.getElementById('emailheader').innerHTML = "Email leak scan";
+        if(process.env.SPECTRA_ENVIRONMENT == "production") {
+            const emailheaders = new Headers();
+            emailheaders.append("Content-Type", "application/json");
+
+            const raw = JSON.stringify({
+                "target": urlParams.get('email')
+                });
+
+            const requestOptions = {
+            method: "POST",
+            headers: emailheaders,
+            body: raw,
+            redirect: "follow"
+            };
+
+            fetch("https://spectra.sakuracloud.nl/api/emailLeaks", requestOptions)
+            .then((response) => response.text())
+            .then((result) => {
+                emailresults = results;
+            })
+            .catch((error) => console.error(error));
+        }
+        else {
+            emailresults = require('../testdata/emaildata.json');
+        }
+    }
+
     // Display AI Advice
     const typed = new Typed('#ai-advice', {
     strings: [results.advice],
@@ -83,8 +115,6 @@ tippy('#disclaimer', {
     });
 
     // Display the results
-    let scanresults;
-
     results.results.forEach(problem => {
         document.getElementById('problems').innerHTML += `<div class="relative col-span-4 lg:col-span-2 p-4 shadow-box border-2 border-gray-300 rounded-md">
         <p class="text-xl font-bold flex">
@@ -94,6 +124,15 @@ tippy('#disclaimer', {
     </div>`;
     });
 
-    console.log(results.results);
-    console.log(scanresults);
+    if(emailresults)
+    {
+        emailresults.forEach(email => {
+            document.getElementById('emailproblems').innerHTML += `<div class="relative col-span-4 lg:col-span-2 p-4 shadow-box border-2 border-gray-300 rounded-md">
+            <p class="text-xl font-bold flex">
+               `+ email.service +`
+            </p>
+            <p>Datum: `+ email.date +`</p>
+        </div>`;
+        });
+    }
 })();
