@@ -83,20 +83,17 @@ class Parser:
             self._panic = True
             return
 
-        self._result = self._parse_to_dict(result)
+        try:
+            self._result = json.loads(result)
+        except json.JSONDecodeError as e:
+            self._panic = True
+            self._panic_logger.error("Failed to parse json from parser with error: %s", e)
+            return
 
 
     def cleanup(self):
         if f"_PARSER_LUA_PANIC_{self._thread_id}" in os.environ.keys():
             os.environ.pop(f"_PARSER_LUA_PANIC_{self._thread_id}")
-
-
-    @staticmethod
-    def _parse_to_dict(lua_table):
-        lua_dict, lua_list = dict(lua_table), list()
-        for value in lua_dict.values():
-            lua_list.append(dict(value))
-        return lua_list
 
 
     @staticmethod
