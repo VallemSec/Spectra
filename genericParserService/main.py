@@ -76,7 +76,7 @@ for thread in lua_parser_threads:
         results += result
 
 if len(panicked_files) > 0:
-    logging.error('{"panicked_parsers": %s', json.dumps(panicked_files))
+    logging.error('{"panicked_parsers": %s}', json.dumps(panicked_files))
 
 print(json.dumps({
     "name": args.name,
